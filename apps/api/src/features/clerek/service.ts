@@ -1,18 +1,25 @@
 import AdmZip from 'adm-zip';
-import Database from 'better-sqlite3';
-import { HTTPException } from 'hono/http-exception';
-import { mapToResponseObject, parseFakturPrefix, query } from './util.js';
+import BetterSqlite3 from 'better-sqlite3';
+import {
+  isValidUserID,
+  mapToResponseObject,
+  parseFakturPrefix,
+  query,
+} from './helper.js';
 import type { Row } from './type.js';
-import { Exception } from './exception.js';
+import { Exception } from '../../error.js';
+import { isValidStoreID } from '../store/helper.js';
 
 interface DBParams {
   buffer: Buffer;
   userID: string;
   storeID: string;
-  date: string;
+  dateFx: string;
 }
 
-export const preparingFileDB = async (file: File | string) => {
+export const prepareDbBuffer = async (
+  file: File | string,
+): Promise<DBParams> => {
   if (typeof file == 'string')
     throw Exception.Validation('invalid request format');
 
@@ -28,24 +35,45 @@ export const preparingFileDB = async (file: File | string) => {
 
   const [storeID, dateTX, userID] = dbFile.name.split('_');
 
+  if (!isValidStoreID(storeID) || !isValidUserID(userID))
+    throw Exception.BadRequest('invalid file content format');
+
   return {
     storeID,
-    fakturPrefix: parseFakturPrefix(dateTX),
+    dateFx: parseFakturPrefix(dateTX),
     userID,
-    dataBuffer: dbFile.getData(),
+    buffer: dbFile.getData(),
   };
 };
 
+export const initAndValidateDB = (buffer: Buffer): BetterSqlite3.Database => {
+  let db: BetterSqlite3.Database;
+  try {
+    db = new BetterSqlite3(buffer);
+    const { table_exists } = db
+      .prepare<
+        [],
+        { table_exists: boolean }
+      >("SELECT 1 as table_exists FROM sqlite_master WHERE name = 'tx_tsale' LIMIT 1")
+      .get()!;
+
+    if (!table_exists) {
+      db.close();
+      throw Exception.BadRequest('invalid file content format');
+    }
+  } catch (error) {
+    console.error(error);
+    throw Exception.ServerError('error while reading file content');
+  }
+
+  return db;
+};
+
 export const processDB = (
-  buffer: Buffer,
+  db: BetterSqlite3.Database,
   userID: string,
   fakturPrefix: string,
 ) => {
-  // validasi format kodetoko dan userID disini
-  const db = new Database(buffer);
-
-  // cek kode toko ke db disini
-
   let rows: Row[];
   try {
     rows = db.prepare(query).all(userID, fakturPrefix) as Row[];
