@@ -8,6 +8,21 @@ interface PageQuery {
   offset: number;
 }
 
+type Store =
+  | {
+      id: string;
+      name: string;
+      branchId: string | null;
+      createdAt: Date;
+      subs: {
+        id: number;
+        createdAt: Date;
+        storeId: string;
+        expiresAt: Date;
+      }[];
+    }
+  | undefined;
+
 export const getAllStore = async ({ limit, offset }: PageQuery) => {
   const count = await db.$count(store);
   if (!count) {
@@ -18,7 +33,9 @@ export const getAllStore = async ({ limit, offset }: PageQuery) => {
   return { data: stores, count };
 };
 
-export const getStoreByIDWithActiveSubsDescending = async (id: string) => {
+export const getStoreByIDWithActiveSubsDescending = async (
+  id: string,
+): Promise<Store> => {
   const store = await db.query.store.findFirst({
     where(fields, operators) {
       return operators.eq(fields.id, id);
@@ -35,9 +52,11 @@ export const getStoreByIDWithActiveSubsDescending = async (id: string) => {
     },
   });
 
-  return store;
+  return store as Store;
 };
-export const getStoreByIDWithLatestSubs = async (id: string) => {
+export const getStoreByIDWithLatestSubs = async (
+  id: string,
+): Promise<Store> => {
   const store = await db.query.store.findFirst({
     where(fields, operators) {
       return operators.eq(fields.id, id);
@@ -52,7 +71,7 @@ export const getStoreByIDWithLatestSubs = async (id: string) => {
     },
   });
 
-  return store;
+  return store as Store;
 };
 
 export const addNewStore = async (values: StoreInsert) => {
