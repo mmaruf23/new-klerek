@@ -1,27 +1,12 @@
-import { sql } from 'drizzle-orm';
+import { desc, eq, gt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { store, type StoreInsert } from '../../db/schema.js';
+import { store, subscription, type StoreInsert } from '../../db/schema.js';
 import { Exception } from '../../error.js';
 
 interface PageQuery {
   limit: number;
   offset: number;
 }
-
-type Store =
-  | {
-      id: string;
-      name: string;
-      branchId: string | null;
-      createdAt: Date;
-      subs: {
-        id: number;
-        createdAt: Date;
-        storeId: string;
-        expiresAt: Date;
-      }[];
-    }
-  | undefined;
 
 export const getAllStore = async ({ limit, offset }: PageQuery) => {
   const count = await db.$count(store);
@@ -34,40 +19,34 @@ export const getAllStore = async ({ limit, offset }: PageQuery) => {
 };
 
 export const getStoreByIDWithActiveSubsDescending = async (id: string) => {
-  const store = await db.query.store.findFirst({
-    where(fields, operators) {
-      return operators.eq(fields.id, id);
-    },
+  const storeResult = await db.query.store.findFirst({
+    where: eq(store.id, id),
     with: {
       subs: {
-        where(fields, operators) {
-          return operators.gt(fields.expiresAt, sql`now()`);
-        },
-        orderBy(fields, operators) {
-          return operators.desc(fields.expiresAt);
-        },
+        where: gt(subscription.expiresAt, new Date()),
+        orderBy: desc(subscription.expiresAt),
       },
     },
   });
 
-  return store;
+  if (storeResult && !storeResult.subs) {
+    storeResult.subs = [];
+  }
+
+  return storeResult;
 };
 export const getStoreByIDWithLatestSubs = async (id: string) => {
-  const store = await db.query.store.findFirst({
-    where(fields, operators) {
-      return operators.eq(fields.id, id);
-    },
+  const storeResult = await db.query.store.findFirst({
+    where: eq(store.id, id),
     with: {
       subs: {
-        limit: 1,
-        orderBy(fields, operators) {
-          return operators.desc(fields.expiresAt);
-        },
+        where: gt(subscription.expiresAt, new Date()),
+        orderBy: desc(subscription.expiresAt),
       },
     },
   });
 
-  return store;
+  return storeResult;
 };
 
 export const addNewStore = async (values: StoreInsert) => {

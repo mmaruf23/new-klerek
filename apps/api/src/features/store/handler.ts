@@ -21,11 +21,11 @@ export const storeHandler = new Hono()
     const id = c.req.param('id');
     if (!isValidStoreID(id)) throw Exception.Validation('invalid store id');
 
-    const store = await getStoreByIDWithActiveSubsDescending(id);
-    if (!store) throw Exception.NotFound('store not found');
+    const data = await getStoreByIDWithActiveSubsDescending(id);
+    if (!data) throw Exception.NotFound('store not found');
 
-    return c.json<ApiResponse<typeof store>>({
+    return c.json<ApiResponse<typeof data>>({
       success: true,
-      data: store,
+      data,
     });
   });

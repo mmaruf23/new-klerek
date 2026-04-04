@@ -17,7 +17,7 @@ export const clerekHandler = new Hono()
 
     if (
       store &&
-      store.subs[0] &&
+      store.subs.length &&
       store.subs[0].expiresAt.getTime() < Date.now()
     ) {
       return c.json<ApiResponse>(
@@ -26,7 +26,7 @@ export const clerekHandler = new Hono()
       );
     }
 
-    if (store && !store.subs.length) {
+    if (store && !store.subs?.length) {
       // just in case, by logic harusnya semua store udah punya subs (trial)
       console.log(`starting trial for ${store.id}`);
       await startTrial(store.id);
