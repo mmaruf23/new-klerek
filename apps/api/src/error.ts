@@ -32,7 +32,11 @@ export const errorHandler: ErrorHandler = async (err, c) => {
     );
   }
 
-  return c.json<ApiResponse>({ success: false, message: err.message }, 500);
+  console.error('SERVER ERROR : ', err.message);
+  return c.json<ApiResponse>(
+    { success: false, message: 'INTERNAL SERVER ERROR' },
+    500,
+  );
 };
 
 export const notFoundHandler: NotFoundHandler = (c) => {

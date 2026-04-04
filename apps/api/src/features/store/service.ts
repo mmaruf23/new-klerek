@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { store, type StoreInsert } from '../../db/schema.js';
+import { Exception } from '../../error.js';
 
 interface PageQuery {
   limit: number;
@@ -54,7 +55,8 @@ export const getStoreByIDWithLatestSubs = async (id: string) => {
   return store;
 };
 
-export const createStore = async (values: StoreInsert) => {
-  const [newStore] = await db.insert(store).values(values).returning();
-  return newStore;
+export const addNewStore = async (values: StoreInsert) => {
+  const result = await db.insert(store).values(values).onConflictDoNothing();
+  if (!result.rowCount)
+    throw Exception.ServerError('Failed add new store to database');
 };
