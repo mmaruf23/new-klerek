@@ -33,9 +33,7 @@ export const getAllStore = async ({ limit, offset }: PageQuery) => {
   return { data: stores, count };
 };
 
-export const getStoreByIDWithActiveSubsDescending = async (
-  id: string,
-): Promise<Store> => {
+export const getStoreByIDWithActiveSubsDescending = async (id: string) => {
   const store = await db.query.store.findFirst({
     where(fields, operators) {
       return operators.eq(fields.id, id);
@@ -52,11 +50,9 @@ export const getStoreByIDWithActiveSubsDescending = async (
     },
   });
 
-  return store as Store;
+  return store;
 };
-export const getStoreByIDWithLatestSubs = async (
-  id: string,
-): Promise<Store> => {
+export const getStoreByIDWithLatestSubs = async (id: string) => {
   const store = await db.query.store.findFirst({
     where(fields, operators) {
       return operators.eq(fields.id, id);
@@ -71,7 +67,7 @@ export const getStoreByIDWithLatestSubs = async (
     },
   });
 
-  return store as Store;
+  return store;
 };
 
 export const addNewStore = async (values: StoreInsert) => {
