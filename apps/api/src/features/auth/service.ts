@@ -1,6 +1,6 @@
-import 'dotenv/config';
 import { sign } from 'hono/jwt';
 import { Exception } from '../../error.js';
+import { LoadConfig } from '../../config.js';
 
 export type LoginPayload = {
   username: string | undefined;
@@ -8,17 +8,18 @@ export type LoginPayload = {
 };
 
 export const login = async (payload: LoginPayload) => {
+  const config = LoadConfig();
   console.log('ini payload : ', payload);
-  if (!payload.username || payload.username !== process.env.USERNAME)
+  if (!payload.username || payload.username !== config.USERNAME)
     throw Exception.Unauthorized();
-  if (!payload.password || payload.password !== process.env.PASSWORD)
+  if (!payload.password || payload.password !== config.PASSWORD)
     throw Exception.Unauthorized('wrong password!');
 
   const token = await sign(
     {
       exp: Math.floor(Date.now() / 1000 + 60 * 10),
     },
-    process.env.JWT_SECRET!,
+    config.JWT_SECRET,
   );
 
   return token;

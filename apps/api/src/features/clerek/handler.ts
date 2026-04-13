@@ -3,38 +3,61 @@ import { Hono } from 'hono';
 import { initAndValidateDB, prepareDbBuffer, processDB } from './service.js';
 import { addNewStore, getStoreByIDWithLatestSubs } from '../store/service.js';
 import { startTrial } from '../subscription/service.js';
-import { DAY } from '../../constant/time.js';
+import { DAY } from '../../constants/time.js';
+import { cookieMiddleware } from '../auth/middleware.js';
+import { setClaims, type JwtClaims } from '../../utils/jwt.js';
+import { setCookie } from 'hono/cookie';
+
+type StoreWithSubs = {
+  id: string;
+  name: string;
+  branchId: string | null;
+  createdAt: Date;
+  subs: {
+    id: number;
+    createdAt: Date;
+    storeId: string;
+    expiresAt: Date;
+  }[];
+};
 
 export const clerekHandler = new Hono()
   // UPLOAD
-  .post('/', async (c) => {
+  .post('/', cookieMiddleware, async (c) => {
     const form = await c.req.parseBody();
     const { buffer, userID, dateFx, storeID } = await prepareDbBuffer(
       form.file,
     );
 
-    const store = await getStoreByIDWithLatestSubs(storeID);
+    let store: StoreWithSubs | undefined;
 
-    if (
-      store &&
-      store.subs.length &&
-      store.subs[0].expiresAt.getTime() < Date.now()
-    ) {
-      return c.json<ApiResponse>(
-        { success: false, message: 'EXPIRED ACCESS' },
-        401,
-      );
-    }
+    const claims = c.get('jwtPayload') as JwtClaims | undefined;
+    if (claims?.store_id !== storeID) {
+      store = await getStoreByIDWithLatestSubs(storeID);
 
-    if (store && !store.subs?.length) {
-      // just in case, by logic harusnya semua store udah punya subs (trial)
-      console.log(`starting trial for ${store.id}`);
-      await startTrial(store.id);
+      if (
+        store &&
+        store.subs.length &&
+        store.subs[0].expiresAt.getTime() < Date.now()
+      ) {
+        return c.json<ApiResponse>(
+          { success: false, message: 'EXPIRED ACCESS' },
+          401,
+        );
+      }
+
+      if (store && !store.subs?.length) {
+        // just in case, by logic harusnya semua store udah punya subs (trial)
+        console.log(`starting trial for ${store.id}`);
+        await startTrial(store.id);
+      }
     }
 
     const db = initAndValidateDB(buffer);
     const data = processDB(db, userID, dateFx);
-    if (!store) {
+    db.close();
+
+    if (claims?.store_id && !store) {
       await addNewStore({
         id: data.store_id,
         name: data.store_name,
@@ -43,11 +66,20 @@ export const clerekHandler = new Hono()
       await startTrial(data.store_id);
     }
 
+    if (!claims) {
+      const token = await setClaims(
+        storeID,
+        Math.floor(Date.now() / 1000) + 7 * DAY,
+      );
+      setCookie(c, 'access_token', token);
+    }
+
     c.header(
       'Expires-At',
       store && store.subs.length
         ? store.subs[0].expiresAt.getTime().toString()
         : (Date.now() + 7 * DAY).toString(),
     );
+
     return c.json<ApiResponse<typeof data>>({ success: true, data });
   });

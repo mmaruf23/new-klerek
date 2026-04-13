@@ -2,6 +2,10 @@ var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -14,4 +18,18 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 
 // src/index.ts
 var index_exports = {};
+__export(index_exports, {
+  time: () => time
+});
 module.exports = __toCommonJS(index_exports);
+
+// src/constant.ts
+var time = {
+  MINUTE: 6e4,
+  HOUR: 36e5,
+  DAY: 864e5
+};
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  time
+});

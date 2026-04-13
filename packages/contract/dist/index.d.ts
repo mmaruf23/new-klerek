@@ -36,4 +36,10 @@ interface Summary {
     total_faktur: number;
 }
 
-export type { ApiResponse, Data, Summary };
+declare const time: {
+    MINUTE: number;
+    HOUR: number;
+    DAY: number;
+};
+
+export { type ApiResponse, type Data, type Summary, time };

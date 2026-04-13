@@ -1,4 +1,4 @@
-import { DAY } from '../../constant/time.js';
+import { DAY } from '../../constants/time.js';
 import { db } from '../../db/client.js';
 import { subscription, type SubscriptionInsert } from '../../db/schema.js';
 
