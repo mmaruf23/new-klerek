@@ -57,7 +57,7 @@ export const clerekHandler = new Hono()
     const data = processDB(db, userID, dateFx);
     db.close();
 
-    if (claims?.store_id && !store) {
+    if (!claims?.store_id && !store) {
       await addNewStore({
         id: data.store_id,
         name: data.store_name,
@@ -69,7 +69,7 @@ export const clerekHandler = new Hono()
     if (!claims) {
       const token = await setClaims(
         storeID,
-        Math.floor(Date.now() / 1000) + 7 * DAY,
+        Math.floor((Date.now() + 7 * DAY) / 1000),
       );
       setCookie(c, 'access_token', token);
     }
