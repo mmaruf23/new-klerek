@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import {
   getAllStore,
   getStoreByIDWithActiveSubsDescending,
+  getStoreByIDWithLatestSubs,
 } from './service.js';
 import { isValidStoreID } from './helper.js';
 import { Exception } from '../../error.js';
@@ -21,7 +22,7 @@ export const storeHandler = new Hono()
     const id = c.req.param('id');
     if (!isValidStoreID(id)) throw Exception.Validation('invalid store id');
 
-    const data = await getStoreByIDWithActiveSubsDescending(id);
+    const data = await getStoreByIDWithLatestSubs(id);
     if (!data) throw Exception.NotFound('store not found');
 
     return c.json<ApiResponse<typeof data>>({

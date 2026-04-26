@@ -1,0 +1,188 @@
+openapi: '3.0.3'
+info:
+  title: New Klerek API
+  version: '1.0.0'
+  description: OpenAPI documentation for the `/store` routes.
+servers:
+  - url: https://api.server.test/v1
+    description: Default server URL
+paths:
+  /store:
+    get:
+      summary: List stores
+      description: Returns a paginated list of stores with a total count.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response with store list and count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreListResponse'
+        '401':
+          description: Unauthorized - missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /store/{id}:
+    get:
+      summary: Get store by ID
+      description: Returns a single store with active subscriptions.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Store ID
+      responses:
+        '200':
+          description: Successful response with store details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreDetailResponse'
+        '400':
+          description: Validation error for invalid store ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Store not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    StoreListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/StoreSummary'
+            count:
+              type: integer
+              example: 0
+          required:
+            - data
+            - count
+      required:
+        - success
+        - data
+    StoreDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/StoreWithSubscriptions'
+      required:
+        - success
+        - data
+    StoreSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'A001'
+        name:
+          type: string
+          example: 'Toko Contoh'
+        branchId:
+          type: string
+          nullable: true
+          example: 'B01'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-26T08:00:00Z'
+      required:
+        - id
+        - name
+        - createdAt
+    StoreWithSubscriptions:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'A001'
+        name:
+          type: string
+          example: 'Toko Contoh'
+        branchId:
+          type: string
+          nullable: true
+          example: 'B01'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-26T08:00:00Z'
+        subs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+      required:
+        - id
+        - name
+        - createdAt
+        - subs
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-25T00:00:00Z'
+        storeId:
+          type: string
+          example: 'A001'
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-05-25T00:00:00Z'
+      required:
+        - id
+        - createdAt
+        - storeId
+        - expiresAt
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: 'invalid store id'
+      required:
+        - success
+        - message

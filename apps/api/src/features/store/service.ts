@@ -2,6 +2,7 @@ import { desc, eq, gt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { store, subscription, type StoreInsert } from '../../db/schema.js';
 import { Exception } from '../../error.js';
+import type { StoreResponse } from './response.js';
 
 interface PageQuery {
   limit: number;
@@ -18,7 +19,9 @@ export const getAllStore = async ({ limit, offset }: PageQuery) => {
   return { data: stores, count };
 };
 
-export const getStoreByIDWithActiveSubsDescending = async (id: string) => {
+export const getStoreByIDWithActiveSubsDescending = async (
+  id: string,
+): Promise<StoreResponse | undefined> => {
   const storeResult = await db.query.store.findFirst({
     where: eq(store.id, id),
     with: {
@@ -35,7 +38,9 @@ export const getStoreByIDWithActiveSubsDescending = async (id: string) => {
 
   return storeResult;
 };
-export const getStoreByIDWithLatestSubs = async (id: string) => {
+export const getStoreByIDWithLatestSubs = async (
+  id: string,
+): Promise<StoreResponse | undefined> => {
   const storeResult = await db.query.store.findFirst({
     where: eq(store.id, id),
     with: {
