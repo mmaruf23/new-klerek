@@ -1,8 +1,6 @@
 import { sign, verify } from 'hono/jwt';
-import { LoadConfig } from '../config.js';
+import { config } from '../config.js';
 import type { JWTPayload } from 'hono/utils/jwt/types';
-
-const config = LoadConfig();
 
 export interface JwtClaims extends JWTPayload {
   readonly store_id?: string;

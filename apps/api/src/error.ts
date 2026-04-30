@@ -3,8 +3,8 @@ import type { ErrorHandler, NotFoundHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 
 export class Exception {
-  public static NotFound(m: string) {
-    return new HTTPException(404, { message: 'NOT FOUND' });
+  public static NotFound(m?: string) {
+    return new HTTPException(404, { message: m ?? 'NOT FOUND' });
   }
 
   public static BadRequest(m?: string) {

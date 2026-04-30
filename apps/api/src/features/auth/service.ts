@@ -1,5 +1,4 @@
 import { Exception } from '../../error.js';
-import { LoadConfig } from '../../config.js';
 import { db } from '../../db/client.js';
 import { eq } from 'drizzle-orm';
 import { users } from '../../db/schema.js';
@@ -12,8 +11,6 @@ export type LoginPayload = {
 };
 
 export const login = async (payload: LoginPayload) => {
-  const config = LoadConfig();
-  // console.log('ini payload : ', payload);
   if (!payload.username || !payload.password) throw Exception.Unauthorized();
 
   const u = await db.query.users.findFirst({
