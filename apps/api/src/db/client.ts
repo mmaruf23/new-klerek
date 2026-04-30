@@ -8,14 +8,17 @@ import {
   subscription,
   storeRelations,
   subsRelations,
+  users,
 } from './schema.js';
 
 const config = LoadConfig();
 
 const isProd = config.NODE_ENV === 'production';
 const connectionString = config.DB_URL;
-const schema = { store, subscription, storeRelations, subsRelations };
+const schema = { store, subscription, users, storeRelations, subsRelations };
 
 export const db = isProd
   ? drizzleNeon({ client: neon(connectionString), schema })
   : drizzleNode({ client: new Pool({ connectionString }), schema });
+
+export const isDBOK = !!db;

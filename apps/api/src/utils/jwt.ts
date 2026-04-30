@@ -1,4 +1,3 @@
-import { getCookie } from 'hono/cookie';
 import { sign, verify } from 'hono/jwt';
 import { LoadConfig } from '../config.js';
 import type { JWTPayload } from 'hono/utils/jwt/types';
@@ -6,11 +5,11 @@ import type { JWTPayload } from 'hono/utils/jwt/types';
 const config = LoadConfig();
 
 export interface JwtClaims extends JWTPayload {
-  readonly store_id: string;
+  readonly store_id?: string;
+  readonly sub?: string;
 }
 
-export const setClaims = async (store_id: string, exp: number) => {
-  const payload: JwtClaims = { store_id, exp };
+export const setClaims = async (payload: JwtClaims) => {
   const token = await sign(payload, config.JWT_SECRET, 'HS256');
 
   return token;

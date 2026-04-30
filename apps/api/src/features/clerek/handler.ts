@@ -67,10 +67,12 @@ export const clerekHandler = new Hono()
     }
 
     if (!claims) {
-      const token = await setClaims(
-        storeID,
-        Math.floor((Date.now() + 7 * DAY) / 1000),
-      );
+      const payload: JwtClaims = {
+        store_id: storeID,
+        exp: Math.floor((Date.now() + 7 * DAY) / 1000),
+      };
+
+      const token = await setClaims(payload);
       setCookie(c, 'access_token', token);
     }
 

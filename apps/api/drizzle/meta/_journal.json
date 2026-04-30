@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775295355065,
-      "tag": "0000_chief_iron_fist",
+      "when": 1777307345919,
+      "tag": "0000_create_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777307995373,
+      "tag": "0001_breezy_silverclaw",
       "breakpoints": true
     }
   ]

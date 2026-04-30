@@ -3,7 +3,21 @@ import {
   type InferInsertModel,
   type InferSelectModel,
 } from 'drizzle-orm';
-import { pgTable, varchar, timestamp, integer } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  varchar,
+  timestamp,
+  integer,
+  uuid,
+} from 'drizzle-orm/pg-core';
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  username: varchar('username', { length: 255 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
 
 export const store = pgTable('store', {
   id: varchar('id', { length: 4 }).primaryKey(),
