@@ -1,6 +1,7 @@
 import type { ApiResponse } from '@packages/contract';
 import type { ErrorHandler, NotFoundHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { sendLog } from './utils/telegram.js';
 
 export class Exception {
   public static NotFound(m?: string) {
@@ -26,12 +27,16 @@ export class Exception {
 
 export const errorHandler: ErrorHandler = async (err, c) => {
   if (err instanceof HTTPException) {
+    if (err.status === 500) {
+      sendLog(`🔴 SERVER ERROR\n${err.message}`);
+    }
     return c.json<ApiResponse>(
       { success: false, message: err.message },
       err.status,
     );
   }
 
+  sendLog(`🔴 UNHANDLED ERROR\n${err.message}`);
   console.error('SERVER ERROR : ', err.message);
   return c.json<ApiResponse>(
     { success: false, message: 'INTERNAL SERVER ERROR' },
