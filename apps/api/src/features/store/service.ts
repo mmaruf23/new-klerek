@@ -10,13 +10,12 @@ interface PageQuery {
 }
 
 export const getAllStore = async ({ limit, offset }: PageQuery) => {
-  const count = await db.$count(store);
-  if (!count) {
-    return { data: [], count };
+  const total = await db.$count(store);
+  if (!total) {
+    return { data: [], total, limit, offset, hasNext: false };
   }
   const stores = await db.query.store.findMany({ limit, offset });
-  // todo : bikin meta pagination disini
-  return { data: stores, count };
+  return { data: stores, total, limit, offset, hasNext: offset + limit < total };
 };
 
 export const getStoreByIDWithLatestSubs = async (
