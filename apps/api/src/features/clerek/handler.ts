@@ -7,6 +7,7 @@ import { DAY } from '../../constants/time.js';
 import { cookieMiddleware } from '../auth/middleware.js';
 import { setClaims, type JwtClaims } from '../../utils/jwt.js';
 import { setCookie } from 'hono/cookie';
+import { sendLog } from '../../utils/telegram.js';
 
 type StoreWithSubs = {
   id: string;
@@ -40,6 +41,7 @@ export const clerekHandler = new Hono()
         store.subs.length &&
         store.subs[0].expiresAt.getTime() < Date.now()
       ) {
+        sendLog(`⚠️ SUBSCRIPTION EXPIRED\nToko: ${storeID} mencoba upload tapi akses sudah habis.`);
         return c.json<ApiResponse>(
           { success: false, message: 'EXPIRED ACCESS' },
           401,
@@ -64,6 +66,7 @@ export const clerekHandler = new Hono()
         branchId: data.branch_id,
       });
       await startTrial(data.store_id);
+      sendLog(`🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`);
     }
 
     if (!claims) {
