@@ -150,4 +150,5 @@ Contoh: lihat `apps/web/.env.example`.
 
 - [ ] Implementasi payment flow (Wijaya Pay)
 - [ ] Deploy frontend ke Vercel + set `VITE_API_URL`
-- [ ] Halaman admin untuk lihat daftar store (opsional)
+- [ ] Refresh token untuk admin login (token saat ini expire 10 menit, belum ada mekanisme refresh)
+- [x] Halaman admin untuk lihat daftar store
