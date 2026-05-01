@@ -7,7 +7,9 @@ import { adminMiddleware } from '../auth/middleware.js';
 
 export const storeHandler = new Hono()
   .get('/', adminMiddleware, async (c) => {
-    const stores = await getAllStore({ limit: 100, offset: 0 });
+    const limit = Math.max(1, Number(c.req.query('limit') ?? 20) || 20);
+    const offset = Math.max(0, Number(c.req.query('offset') ?? 0) || 0);
+    const stores = await getAllStore({ limit, offset });
 
     return c.json<ApiResponse<typeof stores>>({
       success: true,
