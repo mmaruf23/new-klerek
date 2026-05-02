@@ -8,6 +8,7 @@ import { cookieMiddleware } from '../auth/middleware.js';
 import { setClaims, type JwtClaims } from '../../utils/jwt.js';
 import { setCookie } from 'hono/cookie';
 import { sendLog } from '../../utils/telegram.js';
+import { config } from '../../config.js';
 
 type StoreWithSubs = {
   id: string;
@@ -76,7 +77,14 @@ export const clerekHandler = new Hono()
       };
 
       const token = await setClaims(payload);
-      setCookie(c, 'access_token', token);
+      const isProd = config.NODE_ENV === 'production';
+      setCookie(c, 'access_token', token, {
+        httpOnly: true,
+        path: '/',
+        sameSite: isProd ? 'None' : 'Lax',
+        secure: isProd,
+        maxAge: (7 * DAY) / 1000,
+      });
     }
 
     c.header(
