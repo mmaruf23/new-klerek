@@ -6,6 +6,7 @@ export interface Config {
   JWT_SECRET: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_CHAT_ID: string;
+  CORS_ORIGIN: string;
 }
 
 export const config: Config = {
@@ -16,4 +17,5 @@ export const config: Config = {
   JWT_SECRET: process.env.JWT_SECRET ?? "ngasalajaudah",
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN ?? "",
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID ?? "",
+  CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
 };
