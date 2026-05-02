@@ -35,8 +35,25 @@ export const subscription = pgTable('subscription', {
   expiresAt: timestamp('expires_at').notNull(),
 });
 
+// Status: pending → paid | failed | expired
+export const payment = pgTable('payment', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  invoiceId: varchar('invoice_id', { length: 100 }).notNull().unique(),
+  storeId: varchar('store_id', { length: 4 })
+    .notNull()
+    .references(() => store.id, { onDelete: 'cascade' }),
+  amount: integer('amount').notNull(),
+  durationDays: integer('duration_days').notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  qrisUrl: varchar('qris_url', { length: 500 }),
+  note: varchar('note', { length: 255 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  paidAt: timestamp('paid_at'),
+});
+
 export const storeRelations = relations(store, ({ many }) => ({
   subs: many(subscription),
+  payments: many(payment),
 }));
 
 export const subsRelations = relations(subscription, ({ one }) => ({
@@ -46,8 +63,18 @@ export const subsRelations = relations(subscription, ({ one }) => ({
   }),
 }));
 
+export const paymentRelations = relations(payment, ({ one }) => ({
+  store: one(store, {
+    fields: [payment.storeId],
+    references: [store.id],
+  }),
+}));
+
 export type Store = InferSelectModel<typeof store>;
 export type StoreInsert = InferInsertModel<typeof store>;
 
 export type Subscription = InferSelectModel<typeof subscription>;
 export type SubscriptionInsert = InferInsertModel<typeof subscription>;
+
+export type Payment = InferSelectModel<typeof payment>;
+export type PaymentInsert = InferInsertModel<typeof payment>;
