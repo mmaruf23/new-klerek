@@ -160,6 +160,14 @@ Deployment menggunakan Vercel CLI via script `deploy.sh` di root monorepo.
 
 Script membaca konfigurasi dari `.env` di root. Salin `.env.example` ke `.env` lalu isi nilainya.
 
+Script **selalu deploy dari monorepo root** agar pnpm dapat resolve dependency `workspace:*` dari `packages/contract`. Vercel menggunakan "Root Directory" project setting untuk menentukan subdirektori build.
+
+### Setup Vercel (satu kali)
+
+Di Vercel dashboard, untuk masing-masing project:
+- Project `apps/api` → Settings → General → **Root Directory** = `apps/api`
+- Project `apps/web` → Settings → General → **Root Directory** = `apps/web`
+
 ### Env Vars Deployment
 
 | Key | Keterangan |
