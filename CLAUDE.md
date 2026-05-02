@@ -13,9 +13,11 @@ new-klerek/
 ├── apps/
 │   ├── api/        → Backend Hono (TypeScript) — deploy ke Vercel Serverless
 │   └── web/        → Frontend React + Vite + Tailwind + shadcn
-└── packages/
-    ├── contract/   → Shared types: ApiResponse, Summary, Data
-    └── schema/     → Abaikan, tidak jadi digunakan
+├── packages/
+│   ├── contract/   → Shared types: ApiResponse, Summary, Data
+│   └── schema/     → Abaikan, tidak jadi digunakan
+├── deploy.sh       → Script deploy Vercel CLI (api, web, atau keduanya)
+└── .env.example    → Template env vars termasuk konfigurasi Vercel
 ```
 
 ## Backend (`apps/api`)
@@ -110,7 +112,7 @@ Env vars yang dibutuhkan: `DB_URL`, `JWT_SECRET`, `NODE_ENV`, `TELEGRAM_BOT_TOKE
 - **Routing:** React Router v7 (SPA, BrowserRouter)
 - **Styling:** Tailwind v4 + shadcn/ui components (manual setup, tanpa CLI)
 - **State:** SummaryContext (React Context + sessionStorage)
-- **Deploy:** Vercel (rencana)
+- **Deploy:** Vercel
 
 ### Struktur
 ```
@@ -146,9 +148,32 @@ Contoh: lihat `apps/web/.env.example`.
 
 ---
 
+## Deploy
+
+Deployment menggunakan Vercel CLI via script `deploy.sh` di root monorepo.
+
+```bash
+./deploy.sh        # deploy apps/api + apps/web
+./deploy.sh api    # deploy apps/api saja
+./deploy.sh web    # deploy apps/web saja
+```
+
+Script membaca konfigurasi dari `.env` di root. Salin `.env.example` ke `.env` lalu isi nilainya.
+
+### Env Vars Deployment
+
+| Key | Keterangan |
+|-----|------------|
+| `VERCEL_TOKEN` | API token — [vercel.com/account/tokens](https://vercel.com/account/tokens) |
+| `VERCEL_ORG_ID` | Team/Org ID — Vercel dashboard → Settings → General |
+| `VERCEL_API_PROJECT_ID` | Project ID `apps/api` — project settings di Vercel |
+| `VERCEL_WEB_PROJECT_ID` | Project ID `apps/web` — project settings di Vercel |
+
+---
+
 ## Hal yang Belum Selesai / Perlu Dikerjakan
 
 - [ ] Implementasi payment flow (Wijaya Pay)
-- [ ] Deploy frontend ke Vercel + set `VITE_API_URL`
 - [ ] Refresh token untuk admin login (token saat ini expire 10 menit, belum ada mekanisme refresh)
+- [x] Deploy frontend ke Vercel (via `deploy.sh`)
 - [x] Halaman admin untuk lihat daftar store
