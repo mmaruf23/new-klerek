@@ -35,16 +35,18 @@ if ! command -v vercel &>/dev/null; then
   exit 1
 fi
 
+# Deploy from monorepo root so pnpm can resolve workspace:* packages.
+# Each Vercel project must have "Root Directory" set in project settings
+# (apps/api or apps/web) so Vercel builds from the correct subdirectory.
 deploy() {
   local name="$1"
-  local cwd="$2"
-  local project_id="$3"
+  local project_id="$2"
 
   echo ""
   echo "==> Deploying $name..."
   VERCEL_ORG_ID="$VERCEL_ORG_ID" \
   VERCEL_PROJECT_ID="$project_id" \
-  vercel --cwd "$cwd" deploy --prod --yes --token="$VERCEL_TOKEN"
+  vercel deploy "$ROOT_DIR" --prod --yes --token="$VERCEL_TOKEN"
   echo "==> $name deployed."
 }
 
@@ -52,14 +54,14 @@ TARGET="${1:-all}"
 
 case "$TARGET" in
   api)
-    deploy "apps/api" "$ROOT_DIR/apps/api" "$VERCEL_API_PROJECT_ID"
+    deploy "apps/api" "$VERCEL_API_PROJECT_ID"
     ;;
   web)
-    deploy "apps/web" "$ROOT_DIR/apps/web" "$VERCEL_WEB_PROJECT_ID"
+    deploy "apps/web" "$VERCEL_WEB_PROJECT_ID"
     ;;
   all)
-    deploy "apps/api" "$ROOT_DIR/apps/api" "$VERCEL_API_PROJECT_ID"
-    deploy "apps/web" "$ROOT_DIR/apps/web" "$VERCEL_WEB_PROJECT_ID"
+    deploy "apps/api" "$VERCEL_API_PROJECT_ID"
+    deploy "apps/web" "$VERCEL_WEB_PROJECT_ID"
     ;;
   *)
     echo "Usage: $0 [api|web|all]"
