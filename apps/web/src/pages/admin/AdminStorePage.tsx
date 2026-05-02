@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { ApiResponse } from '@packages/contract'
 import { useAdmin } from '@/context/AdminContext'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LogOut, Store, ChevronLeft, ChevronRight } from 'lucide-react'
 
