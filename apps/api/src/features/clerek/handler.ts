@@ -1,14 +1,14 @@
-import { ApiResponse } from '@packages/contract';
-import { Hono } from 'hono';
-import { initAndValidateDB, prepareDbBuffer, processDB } from './service.js';
-import { addNewStore, getStoreByIDWithLatestSubs } from '../store/service.js';
-import { startTrial } from '../subscription/service.js';
-import { DAY } from '../../constants/time.js';
-import { cookieMiddleware } from '../auth/middleware.js';
-import { setClaims, type JwtClaims } from '../../utils/jwt.js';
-import { setCookie } from 'hono/cookie';
-import { sendLog } from '../../utils/telegram.js';
-import { config } from '../../config.js';
+import { ApiResponse } from "@packages/contract";
+import { Hono } from "hono";
+import { initAndValidateDB, prepareDbBuffer, processDB } from "./service.js";
+import { addNewStore, getStoreByIDWithLatestSubs } from "../store/service.js";
+import { startTrial } from "../subscription/service.js";
+import { DAY } from "../../constants/time.js";
+import { cookieMiddleware } from "../auth/middleware.js";
+import { setClaims, type JwtClaims } from "../../utils/jwt.js";
+import { setCookie } from "hono/cookie";
+import { sendLog } from "../../utils/telegram.js";
+import { config } from "../../config.js";
 
 type StoreWithSubs = {
   id: string;
@@ -25,7 +25,7 @@ type StoreWithSubs = {
 
 export const clerekHandler = new Hono()
   // UPLOAD
-  .post('/', cookieMiddleware, async (c) => {
+  .post("/", cookieMiddleware, async (c) => {
     const form = await c.req.parseBody();
     const { buffer, userID, dateFx, storeID } = await prepareDbBuffer(
       form.file,
@@ -33,7 +33,7 @@ export const clerekHandler = new Hono()
 
     let store: StoreWithSubs | undefined;
 
-    const claims = c.get('jwtPayload') as JwtClaims | undefined;
+    const claims = c.get("jwtPayload") as JwtClaims | undefined;
     if (claims?.store_id !== storeID) {
       store = await getStoreByIDWithLatestSubs(storeID);
 
@@ -42,9 +42,11 @@ export const clerekHandler = new Hono()
         store.subs.length &&
         store.subs[0].expiresAt.getTime() < Date.now()
       ) {
-        sendLog(`⚠️ SUBSCRIPTION EXPIRED\nToko: ${storeID} mencoba upload tapi akses sudah habis.`);
+        await sendLog(
+          `⚠️ SUBSCRIPTION EXPIRED\nToko: ${storeID} mencoba upload tapi akses sudah habis.`,
+        );
         return c.json<ApiResponse>(
-          { success: false, message: 'EXPIRED ACCESS' },
+          { success: false, message: "EXPIRED ACCESS" },
           401,
         );
       }
@@ -67,7 +69,9 @@ export const clerekHandler = new Hono()
         branchId: data.branch_id,
       });
       await startTrial(data.store_id);
-      sendLog(`🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`);
+      await sendLog(
+        `🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`,
+      );
     }
 
     if (!claims) {
@@ -77,18 +81,18 @@ export const clerekHandler = new Hono()
       };
 
       const token = await setClaims(payload);
-      const isProd = config.NODE_ENV === 'production';
-      setCookie(c, 'access_token', token, {
+      const isProd = config.NODE_ENV === "production";
+      setCookie(c, "access_token", token, {
         httpOnly: true,
-        path: '/',
-        sameSite: isProd ? 'None' : 'Lax',
+        path: "/",
+        sameSite: isProd ? "None" : "Lax",
         secure: isProd,
         maxAge: (7 * DAY) / 1000,
       });
     }
 
     c.header(
-      'Expires-At',
+      "Expires-At",
       store && store.subs.length
         ? store.subs[0].expiresAt.getTime().toString()
         : (Date.now() + 7 * DAY).toString(),

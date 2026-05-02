@@ -28,7 +28,7 @@ export const checkDB = async (): Promise<boolean> => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("DB health check failed:", msg);
-    sendLog(`🔴 DB HEALTH CHECK FAILED\n${msg}`);
+    await sendLog(`🔴 DB HEALTH CHECK FAILED\n${msg}`);
     return false;
   }
 };
