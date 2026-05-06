@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { config } from '../config.js';
 
 export interface QrisResult {
@@ -7,12 +8,12 @@ export interface QrisResult {
 
 // Payload yang dikirim WijayaPay ke callback URL
 export interface WijayapayCallback {
+  ref_id: string;     // externalId yang kita kirim saat create payment
   invoice_id: string;
   merchant_id: string;
   amount: number;
-  status: string; // "paid" | "failed" | "expired"
+  status: string;     // "paid" | "failed" | "expired"
   paid_at?: string;
-  signature: string;
 }
 
 export const createQris = async (params: {
@@ -50,11 +51,12 @@ export const createQris = async (params: {
   };
 };
 
-// Verifikasi signature callback dari WijayaPay.
-// Sesuaikan implementasi dengan docs WijayaPay.
-export const verifyCallbackSignature = (payload: WijayapayCallback): boolean => {
-  if (!config.WIJAYAPAY_CALLBACK_SECRET) return true;
-  const expected = `${payload.invoice_id}${payload.amount}${config.WIJAYAPAY_CALLBACK_SECRET}`;
-  // Ganti dengan algoritma hash yang sesuai docs WijayaPay
-  return payload.signature === expected;
+// X-Signature = MD5(code_merchant + api_key + ref_id)
+export const verifyCallbackSignature = (
+  xSignature: string,
+  refId: string,
+): boolean => {
+  const raw = `${config.WIJAYAPAY_MERCHANT_ID}${config.WIJAYAPAY_API_KEY}${refId}`;
+  const expected = createHash('md5').update(raw).digest('hex');
+  return xSignature === expected;
 };

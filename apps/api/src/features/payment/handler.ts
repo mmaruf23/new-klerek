@@ -89,8 +89,9 @@ export const paymentHandler = new Hono()
   // POST /payment/callback — webhook dari WijayaPay
   .post('/callback', async (c) => {
     const body = await c.req.json<WijayapayCallback>();
+    const xSignature = c.req.header('x-signature') ?? '';
 
-    if (!verifyCallbackSignature(body)) {
+    if (!verifyCallbackSignature(xSignature, body.ref_id)) {
       return c.json<ApiResponse>({ success: false, message: 'invalid signature' }, 401);
     }
 

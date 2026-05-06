@@ -10,7 +10,6 @@ export interface Config {
   WIJAYAPAY_MERCHANT_ID: string;
   WIJAYAPAY_API_KEY: string;
   WIJAYAPAY_BASE_URL: string;
-  WIJAYAPAY_CALLBACK_SECRET: string;
 }
 
 export const config: Config = {
@@ -25,5 +24,4 @@ export const config: Config = {
   WIJAYAPAY_MERCHANT_ID: process.env.WIJAYAPAY_MERCHANT_ID ?? "",
   WIJAYAPAY_API_KEY: process.env.WIJAYAPAY_API_KEY ?? "",
   WIJAYAPAY_BASE_URL: process.env.WIJAYAPAY_BASE_URL ?? "https://wijayapay.id/api",
-  WIJAYAPAY_CALLBACK_SECRET: process.env.WIJAYAPAY_CALLBACK_SECRET ?? "",
 };
