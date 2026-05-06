@@ -8,14 +8,16 @@ import { Pool } from "pg";
 import {
   store,
   subscription,
+  payment,
   storeRelations,
   subsRelations,
+  paymentRelations,
   users,
 } from "./schema.js";
 
 const isProd = config.NODE_ENV === "production";
 const connectionString = config.DATABASE_URL;
-const schema = { store, subscription, users, storeRelations, subsRelations };
+const schema = { store, subscription, payment, users, storeRelations, subsRelations, paymentRelations };
 
 export const db = isProd
   ? drizzleNeon({ client: neon(connectionString), schema })
