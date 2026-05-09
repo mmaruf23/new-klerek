@@ -58,7 +58,7 @@ export const paymentHandler = new Hono()
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      sendLog(`🔴 GENERATE QRIS GAGAL\nToko: ${claims.store_id}\n${msg}`);
+      await sendLog(`🔴 GENERATE QRIS GAGAL\nToko: ${claims.store_id}\n${msg}`);
       throw Exception.ServerError();
     }
 
@@ -99,17 +99,15 @@ export const paymentHandler = new Hono()
       const paidAt = body.paid_at ? new Date(body.paid_at) : new Date();
       const result = await fulfillPayment(body.invoice_id, paidAt);
 
-      if (!result) {
-        // Payment tidak ditemukan atau sudah diproses sebelumnya
-        return c.json<ApiResponse>({ success: true, message: 'already processed' });
+      if (result) {
+        await sendLog(
+          `✅ PEMBAYARAN BERHASIL\nToko: ${result.payment.storeId}\nNominal: Rp${result.payment.amount.toLocaleString('id-ID')}\nAktif hingga: ${result.subscription.expiresAt.toLocaleDateString('id-ID')}`,
+        );
       }
-
-      sendLog(
-        `✅ PEMBAYARAN BERHASIL\nToko: ${result.payment.storeId}\nNominal: Rp${result.payment.amount.toLocaleString('id-ID')}\nAktif hingga: ${result.subscription.expiresAt.toLocaleDateString('id-ID')}`,
-      );
     } else if (body.status === 'expired' || body.status === 'failed') {
       await expirePayment(body.invoice_id);
     }
 
-    return c.json<ApiResponse>({ success: true });
+    // WijayaPay mengharuskan response { status: true } agar tidak retry
+    return c.json({ status: true });
   });
