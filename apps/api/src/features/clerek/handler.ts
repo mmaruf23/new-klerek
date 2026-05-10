@@ -54,6 +54,9 @@ export const clerekHandler = new Hono()
       if (store && !store.subs?.length) {
         // just in case, by logic harusnya semua store udah punya subs (trial)
         console.log(`starting trial for ${store.id}`);
+        await sendLog(
+          `⚠️ STORE WITHOUT SUBSCRIPTION\nToko: ${storeID} tidak memiliki subscription sama sekali. Memulai trial...`,
+        );
         await startTrial(store.id);
       }
     }
@@ -89,6 +92,7 @@ export const clerekHandler = new Hono()
         secure: isProd,
         maxAge: (7 * DAY) / 1000,
       });
+      await sendLog("✅ New Issued Token\nToko: " + data.store_id);
     }
 
     c.header(
