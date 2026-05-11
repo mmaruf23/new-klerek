@@ -26,4 +26,4 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 --> statement-breakpoint
 ALTER TABLE "subscription"
-ADD CONSTRAINT "subscription_store_id_store_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."store" ("id") ON DELETE cascade ON UPDATE no action;
+ADD CONSTRAINT IF NOT EXISTS "subscription_store_id_store_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."store" ("id") ON DELETE cascade ON UPDATE no action;

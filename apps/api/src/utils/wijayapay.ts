@@ -1,5 +1,5 @@
-import { createHash } from 'crypto';
-import { config } from '../config.js';
+import { createHash } from "crypto";
+import { config } from "../config.js";
 
 export interface QrisResult {
   refId: string;
@@ -18,28 +18,32 @@ export interface WijayapayCallback {
 }
 
 const buildSignature = (refId: string): string =>
-  createHash('md5')
-    .update(`${config.WIJAYAPAY_MERCHANT_ID}${config.WIJAYAPAY_API_KEY}${refId}`)
-    .digest('hex');
+  createHash("md5")
+    .update(
+      `${config.WIJAYAPAY_MERCHANT_ID}${config.WIJAYAPAY_API_KEY}${refId}`,
+    )
+    .digest("hex");
 
 export const createQris = async (params: {
   refId: string;
   callbackUrl: string;
+  nominal: number;
 }): Promise<QrisResult> => {
   const signature = buildSignature(params.refId);
 
-  const res = await fetch(`${config.WIJAYAPAY_BASE_URL}/generate`, {
-    method: 'POST',
+  const res = await fetch(`${config.WIJAYAPAY_BASE_URL}/transaction/create`, {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'X-Signature': signature,
+      "Content-Type": "application/json",
+      "X-Signature": signature,
     },
     body: JSON.stringify({
       code_merchant: config.WIJAYAPAY_MERCHANT_ID,
       api_key: config.WIJAYAPAY_API_KEY,
-      code_payment: 'QRIS',
+      code_payment: "QRIS",
       ref_id: params.refId,
       callback_url: params.callbackUrl,
+      nominal: params.nominal, // nominal pembayaran dalam rupiah
     }),
   });
 
