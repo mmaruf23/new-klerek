@@ -2,38 +2,44 @@ import { createHash } from 'crypto';
 import { config } from '../config.js';
 
 export interface QrisResult {
-  invoiceId: string;
-  qrisUrl: string;
+  refId: string;
+  qrImage: string;
+  qrString: string;
+  expiredAt: string;
 }
 
 // Payload yang dikirim WijayaPay ke callback URL
 export interface WijayapayCallback {
-  ref_id: string;     // externalId yang kita kirim saat create payment
-  invoice_id: string;
+  ref_id: string;
   merchant_id: string;
   amount: number;
-  status: string;     // "paid" | "failed" | "expired"
+  status: string; // "paid" | "failed" | "expired"
   paid_at?: string;
 }
 
+const buildSignature = (refId: string): string =>
+  createHash('md5')
+    .update(`${config.WIJAYAPAY_MERCHANT_ID}${config.WIJAYAPAY_API_KEY}${refId}`)
+    .digest('hex');
+
 export const createQris = async (params: {
-  externalId: string;
-  amount: number;
-  storeId: string;
-  description: string;
+  refId: string;
+  callbackUrl: string;
 }): Promise<QrisResult> => {
-  const res = await fetch(`${config.WIJAYAPAY_BASE_URL}/v1/payment/create`, {
+  const signature = buildSignature(params.refId);
+
+  const res = await fetch(`${config.WIJAYAPAY_BASE_URL}/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': config.WIJAYAPAY_API_KEY,
+      'X-Signature': signature,
     },
     body: JSON.stringify({
-      merchant_id: config.WIJAYAPAY_MERCHANT_ID,
-      external_id: params.externalId,
-      amount: params.amount,
-      description: params.description,
-      payment_method: 'QRIS',
+      code_merchant: config.WIJAYAPAY_MERCHANT_ID,
+      api_key: config.WIJAYAPAY_API_KEY,
+      code_payment: 'QRIS',
+      ref_id: params.refId,
+      callback_url: params.callbackUrl,
     }),
   });
 
@@ -42,12 +48,14 @@ export const createQris = async (params: {
     throw new Error(`WijayaPay error ${res.status}: ${err}`);
   }
 
-  const data = await res.json();
+  const json = await res.json();
+  const data = json.data;
 
-  // Sesuaikan field name dengan response aktual dari WijayaPay
   return {
-    invoiceId: data.invoice_id,
-    qrisUrl: data.qris_url,
+    refId: data.ref_id,
+    qrImage: data.qr_image,
+    qrString: data.qr_string,
+    expiredAt: data.expired,
   };
 };
 
@@ -56,7 +64,5 @@ export const verifyCallbackSignature = (
   xSignature: string,
   refId: string,
 ): boolean => {
-  const raw = `${config.WIJAYAPAY_MERCHANT_ID}${config.WIJAYAPAY_API_KEY}${refId}`;
-  const expected = createHash('md5').update(raw).digest('hex');
-  return xSignature === expected;
+  return xSignature === buildSignature(refId);
 };

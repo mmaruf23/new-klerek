@@ -7,14 +7,10 @@ export const createPendingPayment = async (data: PaymentInsert) => {
   return result;
 };
 
-export const updatePaymentInvoice = async (
-  id: number,
-  invoiceId: string,
-  qrisUrl: string,
-) => {
+export const updatePaymentQris = async (id: number, qrisUrl: string) => {
   const [result] = await db
     .update(payment)
-    .set({ invoiceId, qrisUrl })
+    .set({ qrisUrl })
     .where(eq(payment.id, id))
     .returning();
   return result;
