@@ -24,6 +24,7 @@ export const config: Config = {
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
   WIJAYAPAY_MERCHANT_ID: process.env.WIJAYAPAY_MERCHANT_ID ?? "",
   WIJAYAPAY_API_KEY: process.env.WIJAYAPAY_API_KEY ?? "",
-  WIJAYAPAY_BASE_URL: process.env.WIJAYAPAY_BASE_URL ?? "https://wijayapay.id/api",
+  WIJAYAPAY_BASE_URL:
+    process.env.WIJAYAPAY_BASE_URL ?? "https://wijayapay.com/api",
   WIJAYAPAY_CALLBACK_URL: process.env.WIJAYAPAY_CALLBACK_URL ?? "",
 };

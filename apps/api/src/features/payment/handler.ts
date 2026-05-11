@@ -4,6 +4,7 @@ import { cookieMiddleware } from "../auth/middleware.js";
 import { dataPrice } from "../subscription/data.js";
 import {
   createQris,
+  QrisResult,
   verifyCallbackSignature,
   type WijayapayCallback,
 } from "../../utils/wijayapay.js";
@@ -54,7 +55,7 @@ export const paymentHandler = new Hono()
       durationDays,
     });
 
-    let qrisResult;
+    let qrisResult: QrisResult;
     try {
       qrisResult = await createQris({
         refId,
@@ -92,24 +93,28 @@ export const paymentHandler = new Hono()
 
   // POST /payment/callback — webhook dari WijayaPay
   .post("/callback", async (c) => {
-    const body = await c.req.json<WijayapayCallback>();
+    const { data, status } = await c.req.json<WijayapayCallback>();
     const xSignature = c.req.header("x-signature") ?? "";
 
-    if (!verifyCallbackSignature(xSignature, body.ref_id)) {
+    if (!verifyCallbackSignature(xSignature, data.ref_id)) {
+      await sendLog(
+        `🔴 CALLBACK SIGNATURE TIDAK VALID\nRef ID: ${data.ref_id}`,
+      );
+      console.warn("Invalid callback signature for ref_id:", data.ref_id);
       return c.json({ status: false }, 401);
     }
 
-    if (body.status === "paid") {
-      const paidAt = body.paid_at ? new Date(body.paid_at) : new Date();
-      const result = await fulfillPayment(body.ref_id, paidAt);
+    if (status === "paid") {
+      const paidAt = data.updated_at ? new Date(data.updated_at) : new Date();
+      const result = await fulfillPayment(data.ref_id, paidAt);
 
       if (result) {
         await sendLog(
           `✅ PEMBAYARAN BERHASIL\nToko: ${result.payment.storeId}\nNominal: Rp${result.payment.amount.toLocaleString("id-ID")}\nAktif hingga: ${result.subscription.expiresAt.toLocaleDateString("id-ID")}`,
         );
       }
-    } else if (body.status === "expired" || body.status === "failed") {
-      await expirePayment(body.ref_id);
+    } else if (status === "expired" || status === "pending") {
+      await expirePayment(data.ref_id);
     }
 
     // WijayaPay mengharuskan response { status: true } agar tidak retry

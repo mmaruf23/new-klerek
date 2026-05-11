@@ -10,11 +10,16 @@ export interface QrisResult {
 
 // Payload yang dikirim WijayaPay ke callback URL
 export interface WijayapayCallback {
-  ref_id: string;
-  merchant_id: string;
-  amount: number;
-  status: string; // "paid" | "failed" | "expired"
-  paid_at?: string;
+  status: "paid" | "pending" | "expired";
+  data: {
+    updated_at: "string";
+    payment_methode: "QRIS";
+    total_dibayar: 1000;
+    total_fee: 107;
+    amount_received: 893;
+    trx_reference: "WP260511222510770";
+    ref_id: "klerek-J599-1778513109971";
+  };
 }
 
 const buildSignature = (refId: string): string =>
