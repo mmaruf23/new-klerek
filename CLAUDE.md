@@ -166,7 +166,7 @@ Lihat `apps/api/.example.env` untuk template lengkap.
 ### Tech Stack
 - **Framework:** React 19 + Vite
 - **Routing:** React Router v7 (SPA, BrowserRouter)
-- **Styling:** Tailwind v4 + shadcn/ui components (manual setup, tanpa CLI)
+- **Styling:** Tailwind v4 + shadcn/ui components (style: `new-york`, via CLI)
 - **State:** SummaryContext + AdminContext (React Context + sessionStorage)
 - **Deploy:** Vercel
 
@@ -182,7 +182,7 @@ src/
 │   └── admin/
 │       ├── AdminLoginPage.tsx  → Login admin (/admin/login)
 │       └── AdminStorePage.tsx  → Daftar store (/admin/stores)
-├── components/ui/           → shadcn components: Button, Card, Badge
+├── components/ui/           → shadcn components: Button, Card, Badge (tambah komponen: `pnpm dlx shadcn@latest add <komponen>`)
 ├── lib/utils.ts             → cn() utility (clsx + tailwind-merge)
 └── App.tsx                  → BrowserRouter + Routes + SummaryProvider
 ```
