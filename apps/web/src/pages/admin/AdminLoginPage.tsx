@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ApiResponse } from '@packages/contract'
-import { useAdmin } from '@/context/AdminContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
@@ -9,7 +8,6 @@ const API_URL = import.meta.env.VITE_API_URL ?? ''
 
 export default function AdminLoginPage() {
   const navigate = useNavigate()
-  const { setToken } = useAdmin()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,7 +28,7 @@ export default function AdminLoginPage() {
         setError(json.message ?? 'Username atau password salah.')
         return
       }
-      setToken(json.data)
+      sessionStorage.setItem('klerek_admin_token', json.data)
       navigate('/admin/stores')
     } catch {
       setError('Tidak dapat terhubung ke server.')

@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useSummary } from '@/context/SummaryContext'
+import { Link, useLoaderData } from 'react-router-dom'
+import type { Summary } from '@packages/contract'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Store, CalendarDays, Receipt } from 'lucide-react'
@@ -10,22 +9,13 @@ function formatRupiah(amount: number) {
 }
 
 export default function SummaryPage() {
-  const navigate = useNavigate()
-  const { summary } = useSummary()
-
-  useEffect(() => {
-    if (!summary) navigate('/', { replace: true })
-  }, [summary, navigate])
-
-  if (!summary) return null
-
+  const summary = useLoaderData() as Summary
   const totalNominal = summary.data.reduce((acc, d) => acc + d.cash, 0)
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] p-4">
       <div className="max-w-lg mx-auto space-y-4">
 
-        {/* Header */}
         <div className="flex items-center gap-3 py-2">
           <Link to="/" className="text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors">
             <ArrowLeft className="h-5 w-5" />
@@ -33,7 +23,6 @@ export default function SummaryPage() {
           <h1 className="text-lg font-semibold text-[var(--color-foreground)]">Rekap Harian</h1>
         </div>
 
-        {/* Store info */}
         <Card>
           <CardContent className="pt-5 space-y-2">
             <div className="flex items-center gap-2 text-sm">
@@ -49,7 +38,6 @@ export default function SummaryPage() {
           </CardContent>
         </Card>
 
-        {/* Totals */}
         <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardHeader className="pb-1 pt-4 px-4">
@@ -69,7 +57,6 @@ export default function SummaryPage() {
           </Card>
         </div>
 
-        {/* Transaction list */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">

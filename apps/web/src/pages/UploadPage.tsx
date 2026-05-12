@@ -1,7 +1,6 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import type { ApiResponse, Summary } from '@packages/contract'
-import { useSummary } from '@/context/SummaryContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { UploadCloud } from 'lucide-react'
@@ -10,12 +9,13 @@ const API_URL = import.meta.env.VITE_API_URL ?? ''
 
 export default function UploadPage() {
   const navigate = useNavigate()
-  const { summary, setSummary } = useSummary()
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+
+  const hasPrevSummary = !!sessionStorage.getItem('klerek_summary')
 
   const handleFile = (f: File) => {
     setError(null)
@@ -46,7 +46,7 @@ export default function UploadPage() {
         setError(json.message ?? 'Gagal memproses file.')
         return
       }
-      setSummary(json.data)
+      sessionStorage.setItem('klerek_summary', JSON.stringify(json.data))
       navigate('/summary')
     } catch {
       setError('Tidak dapat terhubung ke server.')
@@ -112,7 +112,7 @@ export default function UploadPage() {
           </CardContent>
         </Card>
 
-        {summary && (
+        {hasPrevSummary && (
           <p className="text-center text-sm text-[var(--color-muted-foreground)]">
             <Link to="/summary" className="underline underline-offset-4 hover:text-[var(--color-foreground)]">
               Lihat rekap terakhir →
