@@ -1,38 +1,65 @@
-import { createBrowserRouter, redirect } from 'react-router-dom';
-import type { Summary } from '@packages/contract';
-import UploadPage from '@/pages/UploadPage';
-import SummaryPage from '@/pages/SummaryPage';
-import AdminLoginPage from '@/pages/admin/AdminLoginPage';
-import AdminStorePage, {
-  loader as adminStoreLoader,
-} from '@/pages/admin/AdminStorePage';
-import MockAdminLoginPage from './pages/MockAdminLoginPage';
+import { createBrowserRouter, redirect } from "react-router-dom";
+import type { Summary } from "@packages/contract";
+import HomePage from "@/pages/HomePage";
+import SummaryPage from "@/pages/SummaryPage";
+import DetailPage from "@/pages/DetailPage";
+import AdminLoginPage from "@/pages/admin/AdminLoginPage";
+import AdminStorePage, { loader as adminStoreLoader } from "@/pages/admin/AdminStorePage";
+import { redirectIfAdmin } from "@/lib/authGuard";
+import MembershipPage from "./pages/MembershipPage";
+import Layout from "./components/layout/Layout";
+import ContactPage from "./pages/ContactPage";
+
+function summaryLoader(): Summary {
+  const raw = sessionStorage.getItem("klerek_summary");
+  if (!raw) throw redirect("/");
+  return JSON.parse(raw) as Summary;
+}
 
 export const router = createBrowserRouter([
   {
-    path: '/',
-    element: <UploadPage />,
+    path: "/",
+    element: <Layout />,
+    children: [
+      {
+        index: true,
+        element: <HomePage />,
+      },
+      {
+        path: "/summary",
+        loader: summaryLoader,
+        element: <SummaryPage />,
+      },
+      {
+        path: "/detail",
+        loader: summaryLoader,
+        element: <DetailPage />,
+      },
+      {
+        path: "/membership",
+        // loader: summaryLoader,
+        element: <MembershipPage />,
+      },
+      {
+        path: "/contact",
+        // loader: summaryLoader,
+        element: <ContactPage />,
+      },
+    ],
   },
   {
-    path: '/summary',
-    loader: (): Summary => {
-      const raw = sessionStorage.getItem('klerek_summary');
-      if (!raw) throw redirect('/');
-      return JSON.parse(raw) as Summary;
+    path: "/admin/login",
+    loader: () => {
+      redirectIfAdmin();
+      return null;
     },
-    element: <SummaryPage />,
-  },
-  {
-    path: '/admin/login',
     element: <AdminLoginPage />,
   },
   {
-    path: '/admin/login/mock',
-    element: <MockAdminLoginPage />,
-  },
-  {
-    path: '/admin/stores',
+    path: "/admin/stores",
     loader: adminStoreLoader,
     element: <AdminStorePage />,
   },
 ]);
+
+export const routes = router.routes;

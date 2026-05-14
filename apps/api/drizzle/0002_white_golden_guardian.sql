@@ -1,4 +1,4 @@
-CREATE TABLE "payment" IF NOT EXISTS (
+CREATE TABLE "payment" (
     "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (
         sequence name "payment_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START
         WITH
@@ -17,4 +17,4 @@ CREATE TABLE "payment" IF NOT EXISTS (
 );
 --> statement-breakpoint
 ALTER TABLE "payment"
-ADD CONSTRAINT IF NOT EXISTS "payment_store_id_store_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."store" ("id") ON DELETE cascade ON UPDATE no action;
+ADD CONSTRAINT "payment_store_id_store_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."store" ("id") ON DELETE cascade ON UPDATE no action;

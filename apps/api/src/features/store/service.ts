@@ -1,8 +1,8 @@
-import { desc, eq, gt } from 'drizzle-orm';
-import { db } from '../../db/client.js';
-import { store, subscription, type StoreInsert } from '../../db/schema.js';
-import { Exception } from '../../error.js';
-import type { StoreResponse } from './response.js';
+import { desc, eq, gt } from "drizzle-orm";
+import { db } from "../../db/client.js";
+import { store, subscription, type StoreInsert } from "../../db/schema.js";
+import { Exception } from "../../error.js";
+import type { StoreResponse } from "@packages/contract";
 
 interface PageQuery {
   limit: number;
@@ -18,9 +18,7 @@ export const getAllStore = async ({ limit, offset }: PageQuery) => {
   return { data: stores, total, limit, offset, hasNext: offset + limit < total };
 };
 
-export const getStoreByIDWithLatestSubs = async (
-  id: string,
-): Promise<StoreResponse | undefined> => {
+export const getStoreByIDWithLatestSubs = async (id: string): Promise<StoreResponse | undefined> => {
   const storeResult = await db.query.store.findFirst({
     where: eq(store.id, id),
     with: {
@@ -36,6 +34,5 @@ export const getStoreByIDWithLatestSubs = async (
 
 export const addNewStore = async (values: StoreInsert) => {
   const result = await db.insert(store).values(values).onConflictDoNothing();
-  if (!result.rowCount)
-    throw Exception.ServerError('Failed add new store to database');
+  if (!result.rowCount) throw Exception.ServerError("Failed add new store to database");
 };

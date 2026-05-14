@@ -1,6 +1,12 @@
 {
-  "name": "hono",
+  "name": "@apps/api",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
+  "scripts": {
+    "dev": "tsx ./server.ts",
+    "migrate": "drizzle-kit migrate"
+  },
   "dependencies": {
     "@hono/node-server": "^2.0.1",
     "@neondatabase/serverless": "^1.0.2",
