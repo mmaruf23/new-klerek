@@ -15,5 +15,8 @@
   "devDependencies": {
     "tsup": "^8.5.1",
     "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10"
   }
 }

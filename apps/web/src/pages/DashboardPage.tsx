@@ -1,7 +1,10 @@
 import { useLoaderData, useNavigate, useNavigation, useSearchParams } from "react-router-dom";
 import { Bell, Search, SlidersHorizontal, Store, CreditCard, User } from "lucide-react";
-import { STORE_PAGE_LIMIT, ADMIN_TOKEN_KEY, type StoreListData } from "@/services/adminApi";
+import { type StoreListData } from "@/services/adminApi";
 import type { StoreResponse } from "@packages/contract";
+import { config } from "@/config";
+
+const { ACCESS_TOKEN_KEY, STORE_PAGE_LIMIT } = config;
 
 const AVATAR_COLORS = [
   "bg-violet-500",
@@ -65,7 +68,7 @@ function getSubLabel(subs: StoreResponse["subs"]): string {
   return "Tahunan";
 }
 
-export default function AdminStorePage() {
+export default function DashboardPage() {
   const stores = useLoaderData() as StoreListData;
   const navigate = useNavigate();
   const navigation = useNavigation();
@@ -80,7 +83,7 @@ export default function AdminStorePage() {
 
   const handleLoadMore = () => navigate(`?offset=${offset + STORE_PAGE_LIMIT}`);
   const handleLogout = () => {
-    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     navigate("/admin/login");
   };
 

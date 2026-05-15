@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginAdmin } from "@/services/authApi";
 
+const ACCESS_TOKEN_KEY = import.meta.env.VITE_ACCESS_TOKEN_KEY ?? "access_token";
+
 export function useAdminLogin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -12,7 +14,7 @@ export function useAdminLogin() {
     setError(null);
     try {
       const token = await loginAdmin(username, password);
-      sessionStorage.setItem("klerek_admin_token", token);
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
       navigate("/admin/stores");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Terjadi kesalahan.");

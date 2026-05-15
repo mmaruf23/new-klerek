@@ -53,7 +53,7 @@ const Field: FC<FieldProps> = ({ label, value, placeholder, type, setValue }) =>
   );
 };
 
-const AdminLoginPage = () => {
+const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -137,4 +137,4 @@ const AdminLoginPage = () => {
   );
 };
 
-export default AdminLoginPage;
+export default LoginPage;
