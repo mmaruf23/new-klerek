@@ -1,54 +1,59 @@
-import {
-  relations,
-  type InferInsertModel,
-  type InferSelectModel,
-} from 'drizzle-orm';
-import {
-  pgTable,
-  varchar,
-  timestamp,
-  integer,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { relations, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
+import { pgTable, varchar, timestamp, integer, uuid, pgEnum } from "drizzle-orm/pg-core";
 
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  username: varchar('username', { length: 255 }).notNull().unique(),
-  password: varchar('password', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+export const enumRole = pgEnum("role", ["user", "admin", "superadmin"]);
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  username: varchar("username", { length: 255 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  role: enumRole().notNull().default("user"),
+  refferalCode: varchar("referal_code", { length: 10 }).unique(),
 });
 
-export const store = pgTable('store', {
-  id: varchar('id', { length: 4 }).primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(),
-  branchId: varchar('branch_id', { length: 4 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+export const store = pgTable("store", {
+  id: varchar("id", { length: 4 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  branchId: varchar("branch_id", { length: 4 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  referrerId: varchar("referrer_id", { length: 10 }).references(() => users.refferalCode, { onDelete: "set null" }),
 });
 
-export const subscription = pgTable('subscription', {
-  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-  storeId: varchar('store_id', { length: 4 })
+export const subscription = pgTable("subscription", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  storeId: varchar("store_id", { length: 4 })
     .notNull()
-    .references(() => store.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  expiresAt: timestamp('expires_at').notNull(),
+    .references(() => store.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
 });
 
 // Status: pending → paid | failed | expired
-export const payment = pgTable('payment', {
-  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-  invoiceId: varchar('invoice_id', { length: 100 }).notNull().unique(),
-  storeId: varchar('store_id', { length: 4 })
+export const payment = pgTable("payment", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  invoiceId: varchar("invoice_id", { length: 100 }).notNull().unique(),
+  storeId: varchar("store_id", { length: 4 })
     .notNull()
-    .references(() => store.id, { onDelete: 'cascade' }),
-  amount: integer('amount').notNull(),
-  durationDays: integer('duration_days').notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('pending'),
-  qrisUrl: varchar('qris_url', { length: 500 }),
-  note: varchar('note', { length: 255 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  paidAt: timestamp('paid_at'),
+    .references(() => store.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  durationDays: integer("duration_days").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  qrisUrl: varchar("qris_url", { length: 500 }),
+  note: varchar("note", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  paidAt: timestamp("paid_at"),
+});
+
+export const balance = pgTable("balance", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const storeRelations = relations(store, ({ many }) => ({
@@ -57,7 +62,7 @@ export const storeRelations = relations(store, ({ many }) => ({
 }));
 
 export const subsRelations = relations(subscription, ({ one }) => ({
-  storee: one(store, {
+  store: one(store, {
     fields: [subscription.storeId],
     references: [store.id],
   }),
@@ -69,6 +74,19 @@ export const paymentRelations = relations(payment, ({ one }) => ({
     references: [store.id],
   }),
 }));
+
+export const balanceRelations = relations(balance, ({ one }) => ({
+  user: one(users, {
+    fields: [balance.userId],
+    references: [users.id],
+  }),
+}));
+
+export type User = InferSelectModel<typeof users>;
+export type UserInsert = InferInsertModel<typeof users>;
+
+export type Balance = InferSelectModel<typeof balance>;
+export type BalanceInsert = InferInsertModel<typeof balance>;
 
 export type Store = InferSelectModel<typeof store>;
 export type StoreInsert = InferInsertModel<typeof store>;

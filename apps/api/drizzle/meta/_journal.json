@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1777307345919,
-      "tag": "0000_create_tables",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777307995373,
-      "tag": "0001_breezy_silverclaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778506923428,
-      "tag": "0002_white_golden_guardian",
+      "when": 1778826111215,
+      "tag": "0000_chubby_shard",
       "breakpoints": true
     }
   ]

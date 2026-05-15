@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx ./server.ts",
-    "migrate": "drizzle-kit migrate"
+    "migration:run": "drizzle-kit migrate",
+    "migration:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.1",
