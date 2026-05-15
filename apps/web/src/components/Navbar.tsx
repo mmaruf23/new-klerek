@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Upload } from "lucide-react";
-import { routes } from "@/router";
+import { routes } from "@/routes";
 
 interface NavLinks {
   label: string;

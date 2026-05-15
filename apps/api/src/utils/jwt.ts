@@ -15,6 +15,7 @@ export const getClaims = async (token: string) => {
     claims = (await verify(token, config.JWT_SECRET, "HS256")) as JwtClaims;
   } catch (error) {
     const msg = error instanceof Error ? error.message : "";
+
     console.log("Failed get claims from this : ", token, msg);
     return;
   }

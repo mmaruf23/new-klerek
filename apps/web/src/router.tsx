@@ -14,18 +14,8 @@ import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/
 import { fetchStores } from "./services/adminApi";
 import { fetchProfile } from "./services/authApi";
 import { config } from "./config";
-
-export const routes = {
-  home: "/",
-  summary: "/summary",
-  detail: "/detail",
-  membership: "/membership",
-  contact: "/contact",
-  authLogin: "/auth/login",
-  authRegister: "/auth/register",
-  profile: "/profile",
-  stores: "/stores",
-} as const;
+import { routes } from "./routes";
+import AdminLayout from "./components/layout/AdminLayout";
 
 function summaryLoader(): Summary {
   const raw = sessionStorage.getItem("klerek_summary");
@@ -55,8 +45,20 @@ export const router = createBrowserRouter([
       { path: routes.contact, element: <ContactPage /> },
     ],
   },
-  { path: routes.authLogin, middleware: [redirectIfAuthenticatedMiddleware], element: <LoginPage /> },
-  { path: routes.authRegister, element: <RegisterPage /> },
-  { path: routes.profile, middleware: [requireAuthMiddleware], loader: profileLoader, element: <ProfilePage /> },
-  { path: routes.stores, middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
+  {
+    path: routes.home,
+    element: <AdminLayout />,
+    children: [
+      { path: routes.dashboard, middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
+      { path: routes.profile, middleware: [requireAuthMiddleware], loader: profileLoader, element: <ProfilePage /> },
+    ],
+  },
+  {
+    path: routes.home,
+    middleware: [redirectIfAuthenticatedMiddleware],
+    children: [
+      { path: routes.authLogin, element: <LoginPage /> },
+      { path: routes.authRegister, element: <RegisterPage /> },
+    ],
+  },
 ]);

@@ -1,5 +1,5 @@
 import { Link, useLoaderData, useNavigate } from "react-router-dom";
-import { routes } from "@/router";
+import { routes } from "@/routes";
 import type { Summary } from "@packages/contract";
 import { ChevronRight, Download, CalendarDays, Users, Receipt, Package } from "lucide-react";
 

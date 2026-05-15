@@ -28,9 +28,7 @@ export const clerekHandler = new Hono()
   // UPLOAD
   .post("/", cookieMiddleware, async (c) => {
     const form = await c.req.parseBody();
-    const { buffer, userID, dateFx, storeID } = await prepareDbBuffer(
-      form.file,
-    );
+    const { buffer, userID, dateFx, storeID } = await prepareDbBuffer(form.file);
 
     let store: StoreWithSubs | undefined;
 
@@ -38,18 +36,9 @@ export const clerekHandler = new Hono()
     if (claims?.store_id !== storeID) {
       store = await getStoreByIDWithLatestSubs(storeID);
 
-      if (
-        store &&
-        store.subs.length &&
-        store.subs[0].expiresAt.getTime() < Date.now()
-      ) {
-        await sendLog(
-          `⚠️ SUBSCRIPTION EXPIRED\nToko: ${storeID} mencoba upload tapi akses sudah habis.`,
-        );
-        return c.json<ApiResponse>(
-          { success: false, message: "EXPIRED ACCESS" },
-          401,
-        );
+      if (store && store.subs.length && store.subs[0].expiresAt.getTime() < Date.now()) {
+        await sendLog(`⚠️ SUBSCRIPTION EXPIRED\nToko: ${storeID} mencoba upload tapi akses sudah habis.`);
+        return c.json<ApiResponse>({ success: false, message: "EXPIRED ACCESS" }, 401);
       }
 
       if (store && !store.subs?.length) {
@@ -73,9 +62,7 @@ export const clerekHandler = new Hono()
         branchId: data.branch_id,
       });
       await startTrial(data.store_id);
-      await sendLog(
-        `🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`,
-      );
+      await sendLog(`🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`);
     }
 
     if (!claims) {
@@ -86,7 +73,7 @@ export const clerekHandler = new Hono()
 
       const token = await setClaims(payload);
       const isProd = config.NODE_ENV === "production";
-      setCookie(c, "access_token", token, {
+      setCookie(c, config.COOKIE_TOKEN_KEY, token, {
         httpOnly: true,
         path: "/",
         sameSite: isProd ? "None" : "Lax",
@@ -98,9 +85,7 @@ export const clerekHandler = new Hono()
 
     c.header(
       "Expires-At",
-      store && store.subs.length
-        ? store.subs[0].expiresAt.getTime().toString()
-        : (Date.now() + 7 * DAY).toString(),
+      store && store.subs.length ? store.subs[0].expiresAt.getTime().toString() : (Date.now() + 7 * DAY).toString(),
     );
 
     return c.json<ApiResponse<typeof data>>({ success: true, data });

@@ -1,7 +1,7 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import Navbar from "../Navbar";
-import { Info } from "lucide-react";
-import ButtonTabBar from "../ButtonTabBar";
+import { AlignJustify, BarChart2, Info } from "lucide-react";
+import { routes } from "@/routes";
 
 const Layout = () => {
   const location = useLocation();
@@ -28,7 +28,28 @@ const Layout = () => {
         </header>
         <Outlet />
 
-        {["/summary", "/detail"].includes(location.pathname) && <ButtonTabBar active={location.pathname} />}
+        {(location.pathname == routes.summary || location.pathname == routes.detail) && (
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex gap-2 z-10">
+            <Link
+              to={routes.summary}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                location.pathname === routes.summary ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              <BarChart2 className="w-4 h-4" />
+              Rekap
+            </Link>
+            <Link
+              to={routes.detail}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                location.pathname === routes.detail ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              <AlignJustify className="w-4 h-4" />
+              Detail Transaksi
+            </Link>
+          </div>
+        )}
       </div>
     </>
   );

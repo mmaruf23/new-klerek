@@ -2,7 +2,7 @@ import { useState, type Dispatch, type FC, type SetStateAction, type SubmitEvent
 import { Link } from "react-router-dom";
 import { UserPlus, Eye, EyeOff, Copy, Check, ArrowRight } from "lucide-react";
 import { useRegister } from "@/hooks/useRegister";
-import { routes } from "@/router";
+import { routes } from "@/routes";
 
 interface FieldProps {
   label: string;

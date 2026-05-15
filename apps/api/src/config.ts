@@ -11,20 +11,21 @@ export interface Config {
   WIJAYAPAY_API_KEY: string;
   WIJAYAPAY_BASE_URL: string;
   WIJAYAPAY_CALLBACK_URL: string;
+  COOKIE_TOKEN_KEY: string;
+  ACCESS_TOKEN_KEY: string;
 }
 
 export const config: Config = {
   NODE_ENV: process.env.NODE_ENV == "production" ? "production" : "development",
-  DATABASE_URL:
-    process.env.DATABASE_URL ??
-    "postgresql://postgres:postgres@localhost:9876/klerek",
+  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:9876/klerek",
   JWT_SECRET: process.env.JWT_SECRET ?? "ngasalajaudah",
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN ?? "",
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID ?? "",
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
   WIJAYAPAY_MERCHANT_ID: process.env.WIJAYAPAY_MERCHANT_ID ?? "",
   WIJAYAPAY_API_KEY: process.env.WIJAYAPAY_API_KEY ?? "",
-  WIJAYAPAY_BASE_URL:
-    process.env.WIJAYAPAY_BASE_URL ?? "https://wijayapay.com/api",
+  WIJAYAPAY_BASE_URL: process.env.WIJAYAPAY_BASE_URL ?? "https://wijayapay.com/api",
   WIJAYAPAY_CALLBACK_URL: process.env.WIJAYAPAY_CALLBACK_URL ?? "",
+  COOKIE_TOKEN_KEY: "store_token",
+  ACCESS_TOKEN_KEY: "access_token",
 };

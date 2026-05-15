@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadFile } from "@/services/uploadApi";
-import { routes } from "@/router";
+import { routes } from "@/routes";
 
 const RECENT_KEY = "klerek_recent_uploads";
 

@@ -1,7 +1,7 @@
 import { useLoaderData, useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import type { ProfileResponse } from "@packages/contract";
-import { routes } from "@/router";
+import { routes } from "@/routes";
 import { config } from "@/config";
 import { User, Copy, Check, Store, LogOut, ChevronRight, GitBranch, CalendarDays, BadgeCheck } from "lucide-react";
 

@@ -12,10 +12,8 @@
   "dependencies": {
     "@packages/contract": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",
-    "@types/jsonwebtoken": "^9.0.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.14.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",

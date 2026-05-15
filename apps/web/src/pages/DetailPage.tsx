@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link, useLoaderData } from "react-router-dom";
-import { routes } from "@/router";
+import { routes } from "@/routes";
 import type { Summary, Data } from "@packages/contract";
 import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, X, Search } from "lucide-react";
 

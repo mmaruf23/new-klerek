@@ -1,21 +1,24 @@
 import { redirect, type MiddlewareFunction } from "react-router-dom";
-import { decode } from "jsonwebtoken";
 import type { JwtClaims } from "@packages/contract";
 import { config } from "@/config";
 
 const { ACCESS_TOKEN_KEY } = config;
 
+function decodeJwt(token: string): JwtClaims | null {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
 function getClaims(): JwtClaims | null {
   const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
   if (!token) return null;
-  try {
-    const claims = decode(token) as JwtClaims;
-    if (!claims.role) return null;
-    return claims;
-  } catch (error) {
-    console.error("Failed to decode token:", error);
-    return null;
-  }
+  const claims = decodeJwt(token);
+  if (!claims?.role) return null;
+  return claims;
 }
 
 export const requireAuthMiddleware: MiddlewareFunction = async (_, next) => {
