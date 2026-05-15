@@ -1,3 +1,4 @@
+"use strict";
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -19,6 +20,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  loginSchema: () => loginSchema,
+  registerSchema: () => registerSchema,
   time: () => time
 });
 module.exports = __toCommonJS(index_exports);
@@ -29,7 +32,21 @@ var time = {
   HOUR: 36e5,
   DAY: 864e5
 };
+
+// src/auth.ts
+var import_zod = require("zod");
+var loginSchema = import_zod.z.object({
+  username: import_zod.z.string().min(1, "Username wajib diisi"),
+  password: import_zod.z.string().min(1, "Password wajib diisi")
+});
+var registerSchema = import_zod.z.object({
+  name: import_zod.z.string().min(1, "Nama wajib diisi").max(255),
+  username: import_zod.z.string().min(3, "Username minimal 3 karakter").max(50),
+  password: import_zod.z.string().min(6, "Password minimal 6 karakter")
+});
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  loginSchema,
+  registerSchema,
   time
 });

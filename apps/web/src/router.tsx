@@ -4,16 +4,28 @@ import HomePage from "@/pages/HomePage";
 import SummaryPage from "@/pages/SummaryPage";
 import DetailPage from "@/pages/DetailPage";
 import LoginPage from "@/pages/auth/LoginPage";
+import RegisterPage from "@/pages/auth/RegisterPage";
 import DashboardPage from "@/pages/DashboardPage";
-import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/authGuard";
 import MembershipPage from "./pages/MembershipPage";
 import Layout from "./components/layout/Layout";
 import ContactPage from "./pages/ContactPage";
+import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/authGuard";
 import { fetchStores } from "./services/adminApi";
+
+export const routes = {
+  home: "/",
+  summary: "/summary",
+  detail: "/detail",
+  membership: "/membership",
+  contact: "/contact",
+  authLogin: "/auth/login",
+  authRegister: "/auth/register",
+  stores: "/stores",
+} as const;
 
 function summaryLoader(): Summary {
   const raw = sessionStorage.getItem("klerek_summary");
-  if (!raw) throw redirect("/");
+  if (!raw) throw redirect(routes.home);
   return JSON.parse(raw) as Summary;
 }
 
@@ -23,18 +35,17 @@ function storeLoader({ request }: LoaderFunctionArgs) {
 
 export const router = createBrowserRouter([
   {
-    path: "/",
+    path: routes.home,
     element: <Layout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: "/summary", loader: summaryLoader, element: <SummaryPage /> },
-      { path: "/detail", loader: summaryLoader, element: <DetailPage /> },
-      { path: "/membership", element: <MembershipPage /> },
-      { path: "/contact", element: <ContactPage /> },
+      { path: routes.summary, loader: summaryLoader, element: <SummaryPage /> },
+      { path: routes.detail, loader: summaryLoader, element: <DetailPage /> },
+      { path: routes.membership, element: <MembershipPage /> },
+      { path: routes.contact, element: <ContactPage /> },
     ],
   },
-  { path: "/auth/login", middleware: [redirectIfAuthenticatedMiddleware], element: <LoginPage /> },
-  { path: "/stores", middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
+  { path: routes.authLogin, middleware: [redirectIfAuthenticatedMiddleware], element: <LoginPage /> },
+  { path: routes.authRegister, element: <RegisterPage /> },
+  { path: routes.stores, middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
 ]);
-
-export const routes = router.routes;

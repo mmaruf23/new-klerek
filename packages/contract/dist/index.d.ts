@@ -1,4 +1,5 @@
 import { JwtPayload } from 'jsonwebtoken';
+import { z } from 'zod';
 
 interface ApiResponse<T = null> {
     success: boolean;
@@ -62,4 +63,16 @@ interface JwtClaims extends JwtPayload {
     readonly role?: "superadmin" | "admin" | "user";
 }
 
-export { type ApiResponse, type Data, type JwtClaims, type StoreResponse, type Summary, time };
+declare const loginSchema: z.ZodObject<{
+    username: z.ZodString;
+    password: z.ZodString;
+}, z.core.$strip>;
+declare const registerSchema: z.ZodObject<{
+    name: z.ZodString;
+    username: z.ZodString;
+    password: z.ZodString;
+}, z.core.$strip>;
+type LoginInput = z.infer<typeof loginSchema>;
+type RegisterInput = z.infer<typeof registerSchema>;
+
+export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type RegisterInput, type StoreResponse, type Summary, loginSchema, registerSchema, time };

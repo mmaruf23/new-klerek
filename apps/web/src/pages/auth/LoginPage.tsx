@@ -8,7 +8,9 @@ import {
   type SubmitEventHandler,
 } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAdminLogin } from "@/hooks/useAdminLogin";
+import { routes } from "@/router";
 
 interface FieldProps {
   label: string;
@@ -128,9 +130,10 @@ const LoginPage = () => {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-400 leading-relaxed px-8 pb-10 pt-8">
-          Akses ini khusus admin Klerek.
-          <br />
-          Pengguna toko tidak perlu login.
+          Belum punya akun?{" "}
+          <Link to={routes.authRegister} className="text-indigo-500 font-medium hover:text-indigo-600 transition-colors">
+            Daftar di sini
+          </Link>
         </p>
       </div>
     </div>

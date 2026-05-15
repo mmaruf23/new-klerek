@@ -1,4 +1,5 @@
 import { useLoaderData, useNavigate, useNavigation, useSearchParams } from "react-router-dom";
+import { routes } from "@/router";
 import { Bell, Search, SlidersHorizontal, Store, CreditCard, User } from "lucide-react";
 import { type StoreListData } from "@/services/adminApi";
 import type { StoreResponse } from "@packages/contract";
@@ -84,7 +85,7 @@ export default function DashboardPage() {
   const handleLoadMore = () => navigate(`?offset=${offset + STORE_PAGE_LIMIT}`);
   const handleLogout = () => {
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    navigate("/admin/login");
+    navigate(routes.authLogin);
   };
 
   return (

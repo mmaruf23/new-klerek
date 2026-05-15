@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link, useLoaderData } from "react-router-dom";
+import { routes } from "@/router";
 import type { Summary, Data } from "@packages/contract";
 import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, X, Search } from "lucide-react";
 
@@ -197,7 +198,7 @@ export default function DetailPage() {
       <main className="hidden md:flex flex-col flex-1 max-w-7xl w-full mx-auto px-8 py-7">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-sm text-slate-400 mb-5">
-          <Link to="/summary" className="hover:text-slate-700 transition-colors">
+          <Link to={routes.summary} className="hover:text-slate-700 transition-colors">
             Rekap
           </Link>
           <ChevronRight className="w-3.5 h-3.5" />

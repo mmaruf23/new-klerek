@@ -2,29 +2,66 @@ import { Exception } from "../../error.js";
 import { db } from "../../db/client.js";
 import { eq } from "drizzle-orm";
 import { users } from "../../db/schema.js";
-import { comparePassword } from "../../utils/bcrypt.js";
+import { comparePassword, hashPassword } from "../../utils/bcrypt.js";
 import { setClaims } from "../../utils/jwt.js";
+import type { LoginInput, RegisterInput } from "@packages/contract";
 
-export type LoginPayload = {
-  username: string | undefined;
-  password: string | undefined;
-};
+const REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-export const login = async (payload: LoginPayload) => {
-  if (!payload.username || !payload.password) throw Exception.Unauthorized();
+const generateReferralCode = () =>
+  Array.from({ length: 6 }, () => REFERRAL_CHARS[Math.floor(Math.random() * REFERRAL_CHARS.length)]).join("");
 
+export const login = async (payload: LoginInput) => {
   const u = await db.query.users.findFirst({
     where: eq(users.username, payload.username),
   });
   if (!u) throw Exception.Unauthorized("Username atau Password salah");
 
   const validPassword = await comparePassword(payload.password, u.password);
-  if (!validPassword) throw Exception.Unauthorized("Username atau Passsword salah");
+  if (!validPassword) throw Exception.Unauthorized("Username atau Password salah");
 
   const token = await setClaims({
     sub: u.id,
-    exp: Math.floor(Date.now() / 1000 + 60 * 10), // 10 menit
+    exp: Math.floor(Date.now() / 1000 + 60 * 10),
   });
 
   return token;
+};
+
+export const register = async (payload: RegisterInput) => {
+  const existing = await db.query.users.findFirst({
+    where: eq(users.username, payload.username),
+  });
+  if (existing) throw Exception.Validation("Username sudah digunakan");
+
+  const hashed = await hashPassword(payload.password);
+
+  let referralCode: string;
+  let attempts = 0;
+  do {
+    referralCode = generateReferralCode();
+    const taken = await db.query.users.findFirst({
+      where: eq(users.refferalCode, referralCode),
+    });
+    if (!taken) break;
+    attempts++;
+  } while (attempts < 5);
+
+  const [user] = await db
+    .insert(users)
+    .values({
+      name: payload.name,
+      username: payload.username,
+      password: hashed,
+      role: "user",
+      refferalCode: referralCode!,
+    })
+    .returning();
+
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    referralCode: user.refferalCode,
+  };
 };

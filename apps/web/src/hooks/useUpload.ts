@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadFile } from "@/services/uploadApi";
+import { routes } from "@/router";
 
 const RECENT_KEY = "klerek_recent_uploads";
 
@@ -48,7 +49,7 @@ export function useUpload() {
       sessionStorage.setItem("klerek_summary", JSON.stringify(summary));
       sessionStorage.setItem("klerek_upload_filename", file.name);
       saveRecent(file, summary.store_name, summary.branch_id);
-      navigate("/summary");
+      navigate(routes.summary);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Terjadi kesalahan.");
     } finally {

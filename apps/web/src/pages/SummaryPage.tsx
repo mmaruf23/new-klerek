@@ -1,4 +1,5 @@
 import { Link, useLoaderData, useNavigate } from "react-router-dom";
+import { routes } from "@/router";
 import type { Summary } from "@packages/contract";
 import { ChevronRight, Download, CalendarDays, Users, Receipt, Package } from "lucide-react";
 
@@ -107,7 +108,7 @@ export default function SummaryPage() {
       <main className="hidden md:flex flex-col flex-1 max-w-5xl w-full mx-auto px-8 py-8 space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-sm text-slate-400">
-          <Link to="/" className="hover:text-slate-700 transition-colors">
+          <Link to={routes.home} className="hover:text-slate-700 transition-colors">
             Upload
           </Link>
           {filename && (
@@ -141,7 +142,7 @@ export default function SummaryPage() {
               Ekspor PDF
             </button>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate(routes.home)}
               className="flex items-center gap-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-2 rounded-lg transition-colors"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -191,7 +192,7 @@ export default function SummaryPage() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-sm font-semibold text-slate-800">Top item</h2>
               <Link
-                to="/detail"
+                to={routes.detail}
                 className="text-xs text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-0.5"
               >
                 Semua <ChevronRight className="w-3 h-3" />
