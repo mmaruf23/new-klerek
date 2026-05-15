@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  username: z.string().min(1, "Username wajib diisi"),
-  password: z.string().min(1, "Password wajib diisi"),
+  username: z.string().min(3, "Username wajib diisi"),
+  password: z.string().min(6, "Password wajib diisi"),
 });
 
 export const registerSchema = z.object({
@@ -28,4 +28,22 @@ export interface ProfileResponse {
   role: string;
   referralCode: string | null;
   referredStores: ReferredStore[];
+  totalBalance: number;
+}
+
+export interface LoginResponse {
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    role: "admin" | "user" | "superadmin";
+  };
+  token: string;
+}
+
+export interface RegisterResponse {
+  id: string;
+  name: string;
+  username: string;
+  referralCode: string | null;
 }

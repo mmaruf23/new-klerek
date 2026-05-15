@@ -53,8 +53,6 @@ export default function DetailPage() {
   const [mobileLimit, setMobileLimit] = useState(MOBILE_PAGE_SIZE);
   // const [showMobileSearch, setShowMobileSearch] = useState(false);
 
-  const filename = sessionStorage.getItem("klerek_upload_filename") ?? null;
-
   const filtered = useMemo(() => {
     return summary.data.filter((tx) => {
       if (search) {
@@ -208,9 +206,7 @@ export default function DetailPage() {
         {/* Title */}
         <div className="flex items-baseline gap-3 mb-5">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{summary.data.length} transaksi</h1>
-          <span className="text-slate-400 text-base">
-            {filename ? (filename.replace(".zip", "").split("_")[1] ?? summary.date_tx) : summary.date_tx}
-          </span>
+          <span className="text-slate-400 text-base">{summary.date_tx}</span>
         </div>
 
         <div className="flex gap-5 flex-1 min-h-0">

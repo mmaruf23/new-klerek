@@ -36,8 +36,8 @@ var time = {
 // src/auth.ts
 var import_zod = require("zod");
 var loginSchema = import_zod.z.object({
-  username: import_zod.z.string().min(1, "Username wajib diisi"),
-  password: import_zod.z.string().min(1, "Password wajib diisi")
+  username: import_zod.z.string().min(3, "Username wajib diisi"),
+  password: import_zod.z.string().min(6, "Password wajib diisi")
 });
 var registerSchema = import_zod.z.object({
   name: import_zod.z.string().min(1, "Nama wajib diisi").max(255),

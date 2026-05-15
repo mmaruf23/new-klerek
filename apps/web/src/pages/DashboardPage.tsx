@@ -5,7 +5,17 @@ import { type StoreListData } from "@/services/adminApi";
 import type { StoreResponse } from "@packages/contract";
 import { config } from "@/config";
 
-const { ACCESS_TOKEN_KEY, STORE_PAGE_LIMIT } = config;
+const { ACCESS_TOKEN_KEY, USER_DATA_KEY, STORE_PAGE_LIMIT } = config;
+
+function getUserData() {
+  try {
+    const raw = sessionStorage.getItem(USER_DATA_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { id: string; name: string; username: string };
+  } catch {
+    return null;
+  }
+}
 
 const AVATAR_COLORS = [
   "bg-violet-500",
@@ -77,6 +87,9 @@ export default function DashboardPage() {
 
   const offset = Number(searchParams.get("offset") ?? "0");
   const loading = navigation.state === "loading";
+  const user = getUserData();
+  const displayName = user?.name ?? "Admin";
+  const avatarInitials = getInitials(displayName);
 
   const now = new Date();
   const activeCount = stores.data.filter((s) => s.subs?.some((sub) => new Date(sub.expiresAt) > now)).length;
@@ -85,6 +98,7 @@ export default function DashboardPage() {
   const handleLoadMore = () => navigate(`?offset=${offset + STORE_PAGE_LIMIT}`);
   const handleLogout = () => {
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(USER_DATA_KEY);
     navigate(routes.authLogin);
   };
 
@@ -94,7 +108,7 @@ export default function DashboardPage() {
       <div className="px-5 pt-12 pb-4 flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500">Selamat pagi,</p>
-          <h1 className="text-2xl font-bold text-slate-900">Admin Klerek</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{displayName}</h1>
         </div>
         <div className="flex items-center gap-2 mt-1">
           <button className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm relative">
@@ -106,7 +120,7 @@ export default function DashboardPage() {
             className="w-9 h-9 bg-indigo-500 rounded-full flex items-center justify-center"
             title="Keluar"
           >
-            <span className="text-white text-xs font-bold">AK</span>
+            <span className="text-white text-xs font-bold">{avatarInitials}</span>
           </button>
         </div>
       </div>

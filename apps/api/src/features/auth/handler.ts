@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { login, register, getProfile } from "./service.js";
 import { loginSchema, registerSchema } from "@packages/contract";
-import type { ApiResponse, ProfileResponse } from "@packages/contract";
+import type { ApiResponse, LoginResponse, ProfileResponse, RegisterResponse } from "@packages/contract";
 import { adminMiddleware } from "./middleware.js";
 import type { JwtClaims } from "@packages/contract";
 
@@ -13,8 +13,8 @@ export const authHandler = new Hono()
       return c.json<ApiResponse>({ success: false, message: result.error.issues[0].message }, 400);
     }
 
-    const token = await login(result.data);
-    return c.json<ApiResponse<string>>({ success: true, data: token });
+    const data = await login(result.data);
+    return c.json<ApiResponse<LoginResponse>>({ success: true, data });
   })
   .post("/register", async (c) => {
     const body = await c.req.json().catch(() => null);
@@ -24,7 +24,7 @@ export const authHandler = new Hono()
     }
 
     const user = await register(result.data);
-    return c.json<ApiResponse<typeof user>>({ success: true, data: user }, 201);
+    return c.json<ApiResponse<RegisterResponse>>({ success: true, data: user }, 201);
   })
   .get("/me", adminMiddleware, async (c) => {
     const payload = c.get("jwtPayload") as JwtClaims;

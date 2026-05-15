@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { ProfileResponse } from "@packages/contract";
 import { routes } from "@/routes";
 import { config } from "@/config";
-import { User, Copy, Check, Store, LogOut, ChevronRight, GitBranch, CalendarDays, BadgeCheck } from "lucide-react";
+import { User, Copy, Check, Store, LogOut, ChevronRight, GitBranch, CalendarDays, BadgeCheck, Wallet } from "lucide-react";
 
 const ROLE_LABEL: Record<string, string> = {
   user: "Pengguna",
@@ -16,6 +16,10 @@ const ROLE_COLOR: Record<string, string> = {
   admin: "bg-amber-50 text-amber-700 border-amber-200",
   superadmin: "bg-rose-50 text-rose-700 border-rose-200",
 };
+
+function fmtCurrency(amount: number): string {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+}
 
 function fmtDate(date: Date | string): string {
   return new Intl.DateTimeFormat("id-ID", {
@@ -101,6 +105,19 @@ export default function ProfilePage() {
               </p>
             </div>
           )}
+        </div>
+
+        {/* Balance */}
+        <div className="bg-white rounded-3xl p-7 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-1">Saldo Komisi</p>
+              <p className="text-3xl font-extrabold text-slate-900">{fmtCurrency(profile.totalBalance)}</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-emerald-500" />
+            </div>
+          </div>
         </div>
 
         {/* Referred stores */}

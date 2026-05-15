@@ -1,15 +1,9 @@
-import type { ApiResponse, ProfileResponse } from "@packages/contract";
+import { config } from "@/config";
+import type { ApiResponse, LoginResponse, ProfileResponse, RegisterResponse } from "@packages/contract";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "";
+const { API_URL } = config;
 
-interface RegisterResult {
-  id: string;
-  name: string;
-  username: string;
-  referralCode: string | null;
-}
-
-export async function loginAdmin(username: string, password: string): Promise<string> {
+export async function loginAdmin(username: string, password: string): Promise<LoginResponse> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}/auth/login`, {
@@ -20,12 +14,12 @@ export async function loginAdmin(username: string, password: string): Promise<st
   } catch {
     throw new Error("Tidak dapat terhubung ke server.");
   }
-  const json: ApiResponse<string> = await res.json();
+  const json: ApiResponse<LoginResponse> = await res.json();
   if (!json.success || !json.data) throw new Error(json.message ?? "Username atau password salah.");
   return json.data;
 }
 
-export async function registerUser(name: string, username: string, password: string): Promise<RegisterResult> {
+export async function registerUser(name: string, username: string, password: string): Promise<RegisterResponse> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}/auth/register`, {
@@ -36,7 +30,7 @@ export async function registerUser(name: string, username: string, password: str
   } catch {
     throw new Error("Tidak dapat terhubung ke server.");
   }
-  const json: ApiResponse<RegisterResult> = await res.json();
+  const json: ApiResponse<RegisterResponse> = await res.json();
   if (!json.success || !json.data) throw new Error(json.message ?? "Registrasi gagal.");
   return json.data;
 }

@@ -13,10 +13,10 @@ interface Item {
 }
 interface Data {
     member: {
-        phone: string | null;
+        phone: string;
         no_member: string;
-        member_name: string | null;
-    } | null;
+        member_name: string;
+    };
     faktur: {
         bill_no: string;
         no_faktur: string;
@@ -60,6 +60,7 @@ declare const time: {
 interface JwtClaims extends JwtPayload {
     readonly store_id?: string;
     readonly sub?: string;
+    readonly name?: string;
     readonly role?: "superadmin" | "admin" | "user";
 }
 
@@ -87,6 +88,22 @@ interface ProfileResponse {
     role: string;
     referralCode: string | null;
     referredStores: ReferredStore[];
+    totalBalance: number;
+}
+interface LoginResponse {
+    user: {
+        id: string;
+        name: string;
+        username: string;
+        role: "admin" | "user" | "superadmin";
+    };
+    token: string;
+}
+interface RegisterResponse {
+    id: string;
+    name: string;
+    username: string;
+    referralCode: string | null;
 }
 
-export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type ProfileResponse, type ReferredStore, type RegisterInput, type StoreResponse, type Summary, loginSchema, registerSchema, time };
+export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type LoginResponse, type ProfileResponse, type ReferredStore, type RegisterInput, type RegisterResponse, type StoreResponse, type Summary, loginSchema, registerSchema, time };

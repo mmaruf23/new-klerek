@@ -1,7 +1,7 @@
 import { Exception } from "../../error.js";
 import { db } from "../../db/client.js";
-import { eq } from "drizzle-orm";
-import { users, store } from "../../db/schema.js";
+import { eq, sum } from "drizzle-orm";
+import { users, store, balance } from "../../db/schema.js";
 import { comparePassword, hashPassword } from "../../utils/bcrypt.js";
 import { setClaims } from "../../utils/jwt.js";
 import type { LoginInput, RegisterInput } from "@packages/contract";
@@ -12,21 +12,22 @@ const generateReferralCode = () =>
   Array.from({ length: 6 }, () => REFERRAL_CHARS[Math.floor(Math.random() * REFERRAL_CHARS.length)]).join("");
 
 export const login = async (payload: LoginInput) => {
-  const u = await db.query.users.findFirst({
+  const user = await db.query.users.findFirst({
     where: eq(users.username, payload.username),
   });
-  if (!u) throw Exception.Unauthorized("Username atau Password salah");
+  if (!user) throw Exception.Unauthorized("Username atau Password salah");
 
-  const validPassword = await comparePassword(payload.password, u.password);
+  const validPassword = await comparePassword(payload.password, user.password);
   if (!validPassword) throw Exception.Unauthorized("Username atau Password salah");
 
   const token = await setClaims({
-    sub: u.id,
-    role: u.role,
+    sub: user.id,
+    role: user.role,
+    name: user.name,
     exp: Math.floor(Date.now() / 1000 + 60 * 10),
   });
 
-  return token;
+  return { user, token };
 };
 
 export const register = async (payload: RegisterInput) => {
@@ -73,12 +74,18 @@ export const getProfile = async (userId: string) => {
   });
   if (!user) throw Exception.NotFound("User tidak ditemukan");
 
-  const referredStores = user.refferalCode
-    ? await db.query.store.findMany({
-        where: eq(store.referrerId, user.refferalCode),
-        columns: { id: true, name: true, branchId: true, createdAt: true },
-      })
-    : [];
+  const [referredStores, balanceResult] = await Promise.all([
+    user.refferalCode
+      ? db.query.store.findMany({
+          where: eq(store.referrerId, user.refferalCode),
+          columns: { id: true, name: true, branchId: true, createdAt: true },
+        })
+      : Promise.resolve([]),
+    db
+      .select({ total: sum(balance.amount) })
+      .from(balance)
+      .where(eq(balance.userId, userId)),
+  ]);
 
   return {
     id: user.id,
@@ -87,5 +94,6 @@ export const getProfile = async (userId: string) => {
     role: user.role,
     referralCode: user.refferalCode,
     referredStores,
+    totalBalance: Number(balanceResult[0]?.total ?? 0),
   };
 };

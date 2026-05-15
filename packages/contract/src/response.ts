@@ -12,10 +12,10 @@ interface Item {
 
 export interface Data {
   member: {
-    phone: string | null;
+    phone: string;
     no_member: string;
-    member_name: string | null;
-  } | null;
+    member_name: string;
+  };
   faktur: {
     bill_no: string;
     no_faktur: string;
