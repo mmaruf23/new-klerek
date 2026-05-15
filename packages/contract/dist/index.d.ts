@@ -40,7 +40,7 @@ interface StoreResponse {
   name: string;
   branchId: string | null;
   createdAt: Date;
-  subs: {
+  subs?: {
     id: number;
     createdAt: Date;
     storeId: string;

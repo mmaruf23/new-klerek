@@ -1,12 +1,14 @@
-import { redirect } from 'react-router-dom';
+import { redirect, type MiddlewareFunction } from 'react-router-dom';
 import { ADMIN_TOKEN_KEY } from '@/services/adminApi';
 
-export function requireAdmin() {
+export const requireAdminMiddleware: MiddlewareFunction = async (_, next) => {
   if (!sessionStorage.getItem(ADMIN_TOKEN_KEY))
-    throw redirect('/admin/login');
-}
+    return redirect('/admin/login');
+  return next();
+};
 
-export function redirectIfAdmin() {
+export const redirectIfAdminMiddleware: MiddlewareFunction = async (_, next) => {
   if (sessionStorage.getItem(ADMIN_TOKEN_KEY))
-    throw redirect('/admin/stores');
-}
+    return redirect('/admin/stores');
+  return next();
+};
