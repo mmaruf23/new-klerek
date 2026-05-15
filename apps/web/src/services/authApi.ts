@@ -1,4 +1,4 @@
-import type { ApiResponse } from "@packages/contract";
+import type { ApiResponse, ProfileResponse } from "@packages/contract";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
@@ -38,5 +38,15 @@ export async function registerUser(name: string, username: string, password: str
   }
   const json: ApiResponse<RegisterResult> = await res.json();
   if (!json.success || !json.data) throw new Error(json.message ?? "Registrasi gagal.");
+  return json.data;
+}
+
+export async function fetchProfile(token: string): Promise<ProfileResponse> {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) throw new Response("Unauthorized", { status: 401 });
+  const json: ApiResponse<ProfileResponse> = await res.json();
+  if (!json.success || !json.data) throw new Error(json.message ?? "Gagal memuat profil.");
   return json.data;
 }

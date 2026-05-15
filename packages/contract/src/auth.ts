@@ -13,3 +13,19 @@ export const registerSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export interface ReferredStore {
+  id: string;
+  name: string;
+  branchId: string | null;
+  createdAt: Date;
+}
+
+export interface ProfileResponse {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  referralCode: string | null;
+  referredStores: ReferredStore[];
+}

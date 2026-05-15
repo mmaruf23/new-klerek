@@ -1,7 +1,7 @@
 import { Exception } from "../../error.js";
 import { db } from "../../db/client.js";
 import { eq } from "drizzle-orm";
-import { users } from "../../db/schema.js";
+import { users, store } from "../../db/schema.js";
 import { comparePassword, hashPassword } from "../../utils/bcrypt.js";
 import { setClaims } from "../../utils/jwt.js";
 import type { LoginInput, RegisterInput } from "@packages/contract";
@@ -22,6 +22,7 @@ export const login = async (payload: LoginInput) => {
 
   const token = await setClaims({
     sub: u.id,
+    role: u.role,
     exp: Math.floor(Date.now() / 1000 + 60 * 10),
   });
 
@@ -63,5 +64,28 @@ export const register = async (payload: RegisterInput) => {
     name: user.name,
     username: user.username,
     referralCode: user.refferalCode,
+  };
+};
+
+export const getProfile = async (userId: string) => {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+  if (!user) throw Exception.NotFound("User tidak ditemukan");
+
+  const referredStores = user.refferalCode
+    ? await db.query.store.findMany({
+        where: eq(store.referrerId, user.refferalCode),
+        columns: { id: true, name: true, branchId: true, createdAt: true },
+      })
+    : [];
+
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    role: user.role,
+    referralCode: user.refferalCode,
+    referredStores,
   };
 };

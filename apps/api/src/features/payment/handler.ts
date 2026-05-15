@@ -19,7 +19,7 @@ import {
 import { Exception } from "../../error.js";
 import { sendLog } from "../../utils/telegram.js";
 import { config } from "../../config.js";
-import type { JwtClaims } from "../../utils/jwt.js";
+import type { JwtClaims } from "@packages/contract";
 
 export const paymentHandler = new Hono()
 

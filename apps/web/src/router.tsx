@@ -5,12 +5,15 @@ import SummaryPage from "@/pages/SummaryPage";
 import DetailPage from "@/pages/DetailPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
+import ProfilePage from "@/pages/ProfilePage";
 import DashboardPage from "@/pages/DashboardPage";
 import MembershipPage from "./pages/MembershipPage";
 import Layout from "./components/layout/Layout";
 import ContactPage from "./pages/ContactPage";
 import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/authGuard";
 import { fetchStores } from "./services/adminApi";
+import { fetchProfile } from "./services/authApi";
+import { config } from "./config";
 
 export const routes = {
   home: "/",
@@ -20,6 +23,7 @@ export const routes = {
   contact: "/contact",
   authLogin: "/auth/login",
   authRegister: "/auth/register",
+  profile: "/profile",
   stores: "/stores",
 } as const;
 
@@ -31,6 +35,12 @@ function summaryLoader(): Summary {
 
 function storeLoader({ request }: LoaderFunctionArgs) {
   return fetchStores(request);
+}
+
+function profileLoader() {
+  const token = sessionStorage.getItem(config.ACCESS_TOKEN_KEY);
+  if (!token) throw redirect(routes.authLogin);
+  return fetchProfile(token);
 }
 
 export const router = createBrowserRouter([
@@ -47,5 +57,6 @@ export const router = createBrowserRouter([
   },
   { path: routes.authLogin, middleware: [redirectIfAuthenticatedMiddleware], element: <LoginPage /> },
   { path: routes.authRegister, element: <RegisterPage /> },
+  { path: routes.profile, middleware: [requireAuthMiddleware], loader: profileLoader, element: <ProfilePage /> },
   { path: routes.stores, middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
 ]);

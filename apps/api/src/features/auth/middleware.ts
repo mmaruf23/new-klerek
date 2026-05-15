@@ -1,7 +1,8 @@
 import { jwt } from 'hono/jwt';
 import { config } from '../../config.js';
 import type { MiddlewareHandler } from 'hono';
-import { getClaims, type JwtClaims } from '../../utils/jwt.js';
+import { getClaims } from '../../utils/jwt.js';
+import type { JwtClaims } from '@packages/contract';
 import { getCookie } from 'hono/cookie';
 import { Exception } from '../../error.js';
 

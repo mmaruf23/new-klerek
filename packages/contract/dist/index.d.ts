@@ -74,5 +74,19 @@ declare const registerSchema: z.ZodObject<{
 }, z.core.$strip>;
 type LoginInput = z.infer<typeof loginSchema>;
 type RegisterInput = z.infer<typeof registerSchema>;
+interface ReferredStore {
+    id: string;
+    name: string;
+    branchId: string | null;
+    createdAt: Date;
+}
+interface ProfileResponse {
+    id: string;
+    name: string;
+    username: string;
+    role: string;
+    referralCode: string | null;
+    referredStores: ReferredStore[];
+}
 
-export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type RegisterInput, type StoreResponse, type Summary, loginSchema, registerSchema, time };
+export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type ProfileResponse, type ReferredStore, type RegisterInput, type StoreResponse, type Summary, loginSchema, registerSchema, time };
