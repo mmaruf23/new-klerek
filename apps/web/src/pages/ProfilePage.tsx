@@ -3,17 +3,7 @@ import { useState } from "react";
 import type { ProfileResponse } from "@packages/contract";
 import { routes } from "@/router";
 import { config } from "@/config";
-import {
-  User,
-  Copy,
-  Check,
-  Store,
-  LogOut,
-  ChevronRight,
-  GitBranch,
-  CalendarDays,
-  BadgeCheck,
-} from "lucide-react";
+import { User, Copy, Check, Store, LogOut, ChevronRight, GitBranch, CalendarDays, BadgeCheck } from "lucide-react";
 
 const ROLE_LABEL: Record<string, string> = {
   user: "Pengguna",
@@ -97,9 +87,7 @@ export default function ProfilePage() {
             <div className="mt-6 pt-6 border-t border-slate-100">
               <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3">Kode Referral</p>
               <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-5 py-4">
-                <span className="text-2xl font-extrabold text-slate-900 tracking-[0.2em]">
-                  {profile.referralCode}
-                </span>
+                <span className="text-2xl font-extrabold text-slate-900 tracking-[0.2em]">{profile.referralCode}</span>
                 <button
                   onClick={handleCopy}
                   className="flex items-center gap-1.5 text-sm font-medium text-indigo-500 hover:text-indigo-600 transition-colors"

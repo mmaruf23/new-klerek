@@ -14,11 +14,45 @@ new-klerek/
 │   ├── api/        → Backend Hono (TypeScript) — deploy ke Vercel Serverless
 │   └── web/        → Frontend React + Vite + Tailwind + shadcn
 ├── packages/
-│   ├── contract/   → Shared types: ApiResponse, Summary, Data
+│   ├── contract/   → Shared types & Zod schemas: ApiResponse, Summary, auth schemas, JwtClaims
 │   └── schema/     → Abaikan, tidak jadi digunakan
+├── Makefile        → Shortcut dev & deploy
 ├── deploy.sh       → Script deploy Vercel CLI (api, web, atau keduanya)
 └── .env.example    → Template env vars termasuk konfigurasi Vercel
 ```
+
+## Makefile
+
+```bash
+make dev          # jalankan api + web paralel
+make dev-api      # api saja
+make dev-web      # web saja
+make deploy       # deploy api + web ke Vercel
+make deploy-api   # deploy api saja
+make deploy-web   # deploy web saja
+make migrate-run  # jalankan migrasi DB
+make migrate-gen  # generate file migrasi baru
+```
+
+---
+
+## Shared Package (`packages/contract`)
+
+Dibangun dengan `tsup` → output ke `dist/`. **Wajib rebuild setelah edit src:**
+
+```bash
+pnpm --filter @packages/contract build
+```
+
+Berisi:
+- `response.ts` — `ApiResponse<T>`, `Summary`, `Data`, `StoreResponse`
+- `jwt.ts` — `JwtClaims` interface (extend `JwtPayload`)
+- `auth.ts` — Zod schemas (`loginSchema`, `registerSchema`) + inferred types (`LoginInput`, `RegisterInput`) + `ProfileResponse`, `ReferredStore`
+- `constant.ts` — konstanta `time`
+
+`JwtClaims` harus selalu diimport dari `@packages/contract`, **bukan** dari `utils/jwt.ts`.
+
+---
 
 ## Backend (`apps/api`)
 
@@ -28,6 +62,7 @@ new-klerek/
 - **ORM:** Drizzle ORM
 - **DB Prod:** Neon (neon-http driver) — wajib untuk serverless
 - **DB Dev:** PostgreSQL lokal (node-postgres)
+- **Validation:** Zod (schemas di `@packages/contract`)
 - **File parsing:** AdmZip (unzip) + better-sqlite3 (SQLite in-memory)
 
 ### Route Map
@@ -35,7 +70,9 @@ new-klerek/
 | Method | Path | Auth | Deskripsi |
 |--------|------|------|-----------|
 | POST | `/` | cookie (opsional) | Upload zip SQLite, return summary transaksi |
-| POST | `/auth/login` | — | Admin login → JWT bearer (10 menit) |
+| POST | `/auth/login` | — | Login → JWT bearer (10 menit) |
+| POST | `/auth/register` | — | Registrasi user baru (role: "user", referral code auto-generate) |
+| GET | `/auth/me` | adminMiddleware | Profil user yang sedang login + list toko referral |
 | GET | `/store` | adminMiddleware | List semua store + pagination meta |
 | GET | `/store/:id` | adminMiddleware | Detail store + subscription aktif |
 | GET | `/health` | — | API health check |
@@ -49,27 +86,44 @@ new-klerek/
 
 ### Auth — Dua Jenis JWT (same secret, beda payload)
 
-1. **Admin JWT** (bearer, 10 menit): payload `{ sub: userId, exp }` — untuk route `/store`
+1. **User/Admin JWT** (bearer, 10 menit): payload `{ sub: userId, role, exp }` — untuk route `/store`, `/auth/me`
 2. **Store Cookie JWT** (7 hari): payload `{ store_id, exp }` — cookie `access_token`, untuk kasir
 
 `adminMiddleware` di `auth/middleware.ts` verifikasi signature + wajib ada `sub` claim. Store token ditolak di sini.
 
 Cookie di-set dengan `SameSite=None; Secure` di production (cross-domain FE/BE) dan `SameSite=Lax` di development.
 
+### Validasi Request
+
+Semua endpoint yang menerima body menggunakan Zod `safeParse`. Schema didefinisikan di `@packages/contract/src/auth.ts` dan diimport langsung — tidak ada schema lokal di `apps/api`.
+
+```ts
+const result = loginSchema.safeParse(body);
+if (!result.success) {
+  return c.json({ success: false, message: result.error.issues[0].message }, 400);
+}
+```
+
 ### DB Schema
 
 ```
-users:        id (uuid PK), name, username (unique), password (bcrypt), createdAt
-store:        id (varchar 4, PK), name, branchId, createdAt
+users:        id (uuid PK), name, username (unique), password (bcrypt),
+              role (enum: user|admin|superadmin, default: user),
+              refferalCode (varchar 10, unique), createdAt, updatedAt
+store:        id (varchar 4, PK), name, branchId, createdAt,
+              referrerId (FK → users.refferalCode, ON DELETE SET NULL)
 subscription: id (auto int PK), storeId (FK→store CASCADE), createdAt, expiresAt
 payment:      id (auto int PK), invoiceId (unique), storeId (FK→store CASCADE),
               amount (IDR), durationDays, status, qrisUrl, note, createdAt, paidAt
+balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 ```
 
 - Store ID: 4 karakter, campuran huruf + angka
+- Referral code: 6 karakter, huruf kapital + angka, auto-generate saat register
 - `payment.status`: `pending` → `paid` | `failed` | `expired`
 - `payment.note`: keterangan bebas, bisa diisi admin untuk penambahan manual
 - User admin di-seed via `src/db/seed.ts` (jalankan dengan tsx)
+- Kolom `refferalCode` di schema JS (dua 'f') → kolom `referal_code` di DB (satu 'r') — typo lama, jangan diperbaiki tanpa migrasi
 
 ### Alur Upload (`POST /`)
 
@@ -80,6 +134,19 @@ payment:      id (auto int PK), invoiceId (unique), storeId (FK→store CASCADE)
 5. Jika store ada + subscription expired → 401 + notifikasi Telegram
 6. Query SQLite, return `Summary`
 7. Set cookie JWT jika belum ada
+
+### Registrasi User (`POST /auth/register`)
+
+- Field: `name`, `username`, `password` (validasi Zod)
+- Role selalu `"user"` — tidak bisa dipilih dari request
+- Referral code: 6 karakter `A-Z0-9`, generate random, retry max 5x jika collision
+- Return: `{ id, name, username, referralCode }`
+
+### Profil User (`GET /auth/me`)
+
+- Ambil `sub` dari JWT payload → query user
+- Sertakan list store yang `referrerId = user.refferalCode`
+- Return `ProfileResponse`: `{ id, name, username, role, referralCode, referredStores[] }`
 
 ### Payment Flow (WijayaPay)
 
@@ -165,59 +232,111 @@ Lihat `apps/api/.example.env` untuk template lengkap.
 
 ### Tech Stack
 - **Framework:** React 19 + Vite
-- **Routing:** React Router v7 (SPA, BrowserRouter)
+- **Routing:** React Router v7 (SPA, createBrowserRouter)
 - **Styling:** Tailwind v4 + shadcn/ui components (style: `new-york`, via CLI)
-- **State:** SummaryContext + AdminContext (React Context + sessionStorage)
+- **State:** sessionStorage (summary, token) — tidak ada global state manager
 - **Deploy:** Vercel
 
 ### Struktur
 ```
 src/
-├── context/
-│   ├── SummaryContext.tsx   → Context + sessionStorage hydration
-│   └── AdminContext.tsx     → Context token admin
 ├── pages/
-│   ├── UploadPage.tsx       → Halaman upload file (/)
-│   ├── SummaryPage.tsx      → Halaman rekap harian (/summary)
-│   └── admin/
-│       ├── AdminLoginPage.tsx  → Login admin (/admin/login)
-│       └── AdminStorePage.tsx  → Daftar store (/admin/stores)
-├── components/ui/           → shadcn components: Button, Card, Badge (tambah komponen: `pnpm dlx shadcn@latest add <komponen>`)
-├── lib/utils.ts             → cn() utility (clsx + tailwind-merge)
-└── App.tsx                  → BrowserRouter + Routes + SummaryProvider
+│   ├── HomePage.tsx          → Upload file (/)
+│   ├── SummaryPage.tsx       → Rekap harian (/summary)
+│   ├── DetailPage.tsx        → Detail transaksi (/detail)
+│   ├── MembershipPage.tsx    → Halaman membership (/membership)
+│   ├── ContactPage.tsx       → Halaman kontak (/contact)
+│   ├── DashboardPage.tsx     → Daftar store — admin (/stores)
+│   ├── ProfilePage.tsx       → Profil user + list toko referral (/profile)
+│   └── auth/
+│       ├── LoginPage.tsx     → Login (/auth/login)
+│       └── RegisterPage.tsx  → Registrasi user baru (/auth/register)
+├── components/
+│   ├── layout/
+│   │   ├── Layout.tsx        → Layout publik (Navbar + outlet)
+│   │   └── AdminLayout.tsx
+│   ├── Navbar.tsx
+│   ├── ButtonTabBar.tsx
+│   └── ui/                  → shadcn components (tambah: `pnpm dlx shadcn@latest add <komponen>`)
+├── hooks/
+│   ├── useUpload.ts          → Upload file, navigate ke /summary setelah sukses
+│   ├── useAdminLogin.ts      → Login admin, simpan token ke sessionStorage
+│   └── useRegister.ts        → Registrasi user baru
+├── services/
+│   ├── authApi.ts            → loginAdmin(), registerUser(), fetchProfile()
+│   ├── adminApi.ts           → fetchStores()
+│   └── uploadApi.ts          → uploadFile()
+├── lib/
+│   ├── authGuard.ts          → Middleware react-router: requireAuth, requireAdmin, redirectIfAuthenticated
+│   └── utils.ts              → cn() utility
+├── config.ts                 → Config dari env vars (API_URL, ACCESS_TOKEN_KEY, dll)
+└── router.tsx                → Router + export `routes` object
 ```
 
 ### Halaman
 
-| Route | Deskripsi |
-|-------|-----------|
-| `/` | Upload file `.zip` — drag & drop atau file picker, POST ke API |
-| `/summary` | Rekap harian — info toko, total faktur & nominal, daftar transaksi ringkas |
-| `/admin/login` | Login admin |
-| `/admin/stores` | Daftar store + pagination (auth: admin JWT) |
+| Route | Auth | Deskripsi |
+|-------|------|-----------|
+| `/` | — | Upload file `.zip` — drag & drop atau file picker |
+| `/summary` | — | Rekap harian (data dari sessionStorage loader) |
+| `/detail` | — | Detail transaksi per item |
+| `/membership` | — | Informasi paket membership |
+| `/contact` | — | Kontak |
+| `/auth/login` | redirect jika sudah login | Form login |
+| `/auth/register` | — | Form registrasi user baru |
+| `/profile` | requireAuth | Profil user + list toko yang direferral |
+| `/stores` | requireAuth | Daftar store + pagination (admin) |
 
-### State Management
+### Routing & Navigasi
 
-`SummaryContext` menyimpan data `Summary` dari API:
-- Hydrate dari `sessionStorage` sekali saat app load (key: `klerek_summary`)
-- `setSummary()` update state sekaligus tulis ke sessionStorage
-- Komponen baca dari Context (in-memory, tidak parse JSON berulang)
+Route strings dipusatkan di `router.tsx` sebagai object `routes` yang di-export:
+
+```ts
+export const routes = {
+  home: "/",
+  summary: "/summary",
+  detail: "/detail",
+  membership: "/membership",
+  contact: "/contact",
+  authLogin: "/auth/login",
+  authRegister: "/auth/register",
+  profile: "/profile",
+  stores: "/stores",
+} as const;
+```
+
+**Wajib** gunakan `routes.*` untuk semua navigasi dan `<Link to={...}>` — jangan tulis string path secara langsung.
+
+### Auth Guard (frontend)
+
+`lib/authGuard.ts` menyediakan middleware react-router:
+- `requireAuthMiddleware` — cek ada token + `role` claim, redirect ke `/auth/login` jika tidak ada
+- `requireAdminMiddleware` — cek role `admin` atau `superadmin`
+- `requireUserMiddleware` — cek role `user`
+- `redirectIfAuthenticatedMiddleware` — redirect ke `/` jika sudah login
+
+Token disimpan di `sessionStorage` dengan key dari `config.ACCESS_TOKEN_KEY`.
 
 ### Konfigurasi
 
-Env var: `VITE_API_URL` — URL backend API. Default kosong (same-origin).
-Contoh: lihat `apps/web/.env.example`.
+| Env Var | Keterangan |
+|---------|------------|
+| `VITE_API_URL` | URL backend API (default: kosong = same-origin) |
+| `VITE_ACCESS_TOKEN_KEY` | Key sessionStorage untuk token (default: `access_token`) |
+| `VITE_STORE_PAGE_LIMIT` | Jumlah store per halaman di dashboard (default: 20) |
+
+Lihat `apps/web/.env.example` untuk template lengkap.
 
 ---
 
 ## Deploy
 
-Deployment menggunakan Vercel CLI via script `deploy.sh` di root monorepo.
+Deployment menggunakan Vercel CLI via script `deploy.sh` di root monorepo, atau via Makefile.
 
 ```bash
-./deploy.sh        # deploy apps/api + apps/web
-./deploy.sh api    # deploy apps/api saja
-./deploy.sh web    # deploy apps/web saja
+make deploy      # deploy apps/api + apps/web
+make deploy-api  # deploy apps/api saja
+make deploy-web  # deploy apps/web saja
 ```
 
 Script membaca konfigurasi dari `.env` di root. Salin `.env.example` ke `.env` lalu isi nilainya.
@@ -243,8 +362,12 @@ Di Vercel dashboard, untuk masing-masing project:
 
 ## Hal yang Belum Selesai / Perlu Dikerjakan
 
-- [ ] Refresh token untuk admin login (token saat ini expire 10 menit, belum ada mekanisme refresh)
+- [ ] Refresh token — JWT expire 10 menit, belum ada mekanisme refresh
 - [ ] Halaman frontend untuk payment flow (generate QRIS, tampilkan QR, cek status)
 - [x] Implementasi payment flow (WijayaPay — generate QRIS, callback, auto-extend subscription)
-- [x] Deploy frontend ke Vercel (via `deploy.sh`)
+- [x] Deploy frontend ke Vercel (via `deploy.sh` / Makefile)
 - [x] Halaman admin untuk lihat daftar store
+- [x] Registrasi user + halaman register
+- [x] Halaman profil user (referral code + list toko referral)
+- [x] Zod validation untuk semua request body (schema di `@packages/contract`)
+- [x] Route strings dipusatkan di `routes` object — tidak ada hardcoded string path
