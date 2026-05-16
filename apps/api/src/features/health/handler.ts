@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { checkDB } from "../../db/client.js";
 import { pingTelegram } from "../../utils/telegram.js";
 import { Config, config } from "../../config.js";
-import { adminMiddleware } from "../auth/middleware.js";
+import { authMiddleware } from "../auth/middleware.js";
 
 export const healthHandler = new Hono()
   .get("/", (c) => {
@@ -29,7 +29,7 @@ export const healthHandler = new Hono()
 
     return c.json<ApiResponse>({ success: true, message: "TELEGRAM IS OK" });
   })
-  .get("/config", adminMiddleware, async (c) => {
+  .get("/config", authMiddleware, async (c) => {
     return c.json<ApiResponse<Config>>({
       success: true,
       message: "OK",

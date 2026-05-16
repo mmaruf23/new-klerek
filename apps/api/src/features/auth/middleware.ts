@@ -11,7 +11,7 @@ const jwtMiddleware = jwt({
   alg: "HS256",
 });
 
-export const adminMiddleware: MiddlewareHandler = async (c, next) => {
+export const authMiddleware: MiddlewareHandler = async (c, next) => {
   await jwtMiddleware(c, async () => {
     const payload = c.get("jwtPayload") as JwtClaims;
     if (!payload?.sub) throw Exception.Unauthorized();

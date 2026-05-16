@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { payment, subscription, store, type PaymentInsert } from '../../db/schema.js';
+import { payment, subscription, store, users, balance, type PaymentInsert } from '../../db/schema.js';
 
 export const createPendingPayment = async (data: PaymentInsert) => {
   const [result] = await db.insert(payment).values(data).returning();
@@ -59,6 +59,26 @@ export const fulfillPayment = async (invoiceId: string, paidAt: Date) => {
     .insert(subscription)
     .values({ storeId: p.storeId, expiresAt })
     .returning();
+
+  // Komisi referral 50% — hanya jika store punya referrer
+  const storeData = await db.query.store.findFirst({
+    where: eq(store.id, p.storeId),
+  });
+
+  if (storeData?.referrerId) {
+    const referrer = await db.query.users.findFirst({
+      where: eq(users.refferalCode, storeData.referrerId),
+    });
+
+    if (referrer) {
+      await db.insert(balance).values({
+        userId: referrer.id,
+        type: 'credit',
+        amount: Math.floor(p.amount * 0.5),
+        paymentId: updated.id,
+      });
+    }
+  }
 
   return { payment: updated, subscription: newSub };
 };

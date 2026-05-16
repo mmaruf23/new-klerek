@@ -72,24 +72,26 @@ Berisi:
 | POST | `/` | cookie (opsional) | Upload zip SQLite, return summary transaksi |
 | POST | `/auth/login` | — | Login → JWT bearer (10 menit) |
 | POST | `/auth/register` | — | Registrasi user baru (role: "user", referral code auto-generate) |
-| GET | `/auth/me` | adminMiddleware | Profil user yang sedang login + list toko referral |
-| GET | `/store` | adminMiddleware | List semua store + pagination meta |
-| GET | `/store/:id` | adminMiddleware | Detail store + subscription aktif |
+| GET | `/auth/me` | authMiddleware | Profil user yang sedang login + list toko referral + totalBalance |
+| GET | `/auth/balance` | authMiddleware | Riwayat balance user (credit & debit), urut terbaru |
+| GET | `/store` | authMiddleware | List semua store + pagination meta |
+| GET | `/store/:id` | authMiddleware | Detail store + subscription aktif |
+| POST | `/store/:id/subscribe` | authMiddleware | Tambah subscription toko via balance (hanya toko referral sendiri; superadmin gratis) |
 | GET | `/health` | — | API health check |
 | GET | `/health/db` | — | DB health check (jalankan SELECT 1) |
 | GET | `/health/telegram` | — | Kirim ping ke Telegram, cek konfigurasi bot |
-| GET | `/health/config` | adminMiddleware | Lihat config aktif (env vars) |
+| GET | `/health/config` | authMiddleware | Lihat config aktif (env vars) |
 | POST | `/payment/generate` | cookie | Generate QRIS via WijayaPay |
 | GET | `/payment` | cookie | List semua payment milik store |
 | GET | `/payment/:invoiceId` | cookie | Cek status payment |
-| POST | `/payment/callback` | — | Webhook WijayaPay (update status + buat subscription) |
+| POST | `/payment/callback` | — | Webhook WijayaPay (update status + buat subscription + kredit balance referrer 50%) |
 
 ### Auth — Dua Jenis JWT (same secret, beda payload)
 
 1. **User/Admin JWT** (bearer, 10 menit): payload `{ sub: userId, role, exp }` — untuk route `/store`, `/auth/me`
 2. **Store Cookie JWT** (7 hari): payload `{ store_id, exp }` — cookie `access_token`, untuk kasir
 
-`adminMiddleware` di `auth/middleware.ts` verifikasi signature + wajib ada `sub` claim. Store token ditolak di sini.
+`authMiddleware` di `auth/middleware.ts` verifikasi signature + wajib ada `sub` claim. Store token ditolak di sini.
 
 Cookie di-set dengan `SameSite=None; Secure` di production (cross-domain FE/BE) dan `SameSite=Lax` di development.
 

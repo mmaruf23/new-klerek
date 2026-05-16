@@ -68,6 +68,13 @@ export const register = async (payload: RegisterInput) => {
   };
 };
 
+export const getBalanceHistory = async (userId: string) => {
+  return db.query.balance.findMany({
+    where: eq(balance.userId, userId),
+    orderBy: (b, { desc }) => [desc(b.createdAt)],
+  });
+};
+
 export const getProfile = async (userId: string) => {
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
