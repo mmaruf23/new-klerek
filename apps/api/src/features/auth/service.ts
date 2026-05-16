@@ -1,6 +1,6 @@
 import { Exception } from "../../error.js";
 import { db } from "../../db/client.js";
-import { eq, sum } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { users, store, balance } from "../../db/schema.js";
 import { comparePassword, hashPassword } from "../../utils/bcrypt.js";
 import { setClaims } from "../../utils/jwt.js";
@@ -82,7 +82,9 @@ export const getProfile = async (userId: string) => {
         })
       : Promise.resolve([]),
     db
-      .select({ total: sum(balance.amount) })
+      .select({
+        total: sql<number>`sum(case when ${balance.type} = 'credit' then ${balance.amount} else -${balance.amount} end)`,
+      })
       .from(balance)
       .where(eq(balance.userId, userId)),
   ]);
