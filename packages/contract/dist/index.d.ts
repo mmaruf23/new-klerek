@@ -106,4 +106,11 @@ interface RegisterResponse {
     referralCode: string | null;
 }
 
-export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type LoginResponse, type ProfileResponse, type ReferredStore, type RegisterInput, type RegisterResponse, type StoreResponse, type Summary, loginSchema, registerSchema, time };
+interface SubscriptionPackage {
+    price: number;
+    time: number;
+    bonus?: number;
+}
+declare const dataPrice: SubscriptionPackage[];
+
+export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type LoginResponse, type ProfileResponse, type ReferredStore, type RegisterInput, type RegisterResponse, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, loginSchema, registerSchema, time };

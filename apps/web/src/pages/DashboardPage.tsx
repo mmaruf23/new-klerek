@@ -1,9 +1,29 @@
+import { useState } from "react";
 import { useLoaderData, useNavigate, useNavigation, useSearchParams } from "react-router-dom";
 import { routes } from "@/routes";
-import { Bell, Search, SlidersHorizontal } from "lucide-react";
-import { type StoreListData } from "@/services/adminApi";
+import { Bell, Search, SlidersHorizontal, Plus, CheckCircle, XCircle, X } from "lucide-react";
+import { type StoreListData, subscribeStore } from "@/services/adminApi";
 import type { StoreResponse } from "@packages/contract";
+import { dataPrice } from "@packages/contract";
 import { config } from "@/config";
+
+function formatDuration(time: number, bonus?: number): string {
+  const days = Math.round((time + (bonus ?? 0)) / 86_400);
+  if (days >= 365) return `${Math.round(days / 365)} Tahun`;
+  if (days >= 30) return `${Math.round(days / 30)} Bulan`;
+  return `${days} Hari`;
+}
+
+function formatPrice(amount: number): string {
+  return `Rp ${amount.toLocaleString("id-ID")}`;
+}
+
+function formatExpiresAt(subs: StoreResponse["subs"]): string {
+  const now = new Date();
+  const active = subs?.find((s) => new Date(s.expiresAt) > now);
+  if (!active) return "Tidak aktif";
+  return `Aktif hingga ${new Date(active.expiresAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`;
+}
 
 const { ACCESS_TOKEN_KEY, USER_DATA_KEY, STORE_PAGE_LIMIT } = config;
 
@@ -94,6 +114,43 @@ export default function DashboardPage() {
   const now = new Date();
   const activeCount = stores.data.filter((s) => s.subs?.some((sub) => new Date(sub.expiresAt) > now)).length;
   const trialCount = stores.data.filter((s) => getSubStatus(s) === "trial").length;
+
+  // Subscribe modal state
+  const [modalStore, setModalStore] = useState<StoreResponse | null>(null);
+  const [selectedPkg, setSelectedPkg] = useState(3);
+  const [submitting, setSubmitting] = useState(false);
+  const [subResult, setSubResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const handleOpenModal = (store: StoreResponse) => {
+    setModalStore(store);
+    setSelectedPkg(3);
+    setSubResult(null);
+  };
+
+  const handleCloseModal = () => {
+    setModalStore(null);
+    setSubResult(null);
+  };
+
+  const handleSubscribe = async () => {
+    if (!modalStore) return;
+    const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    if (!token) { navigate(routes.authLogin); return; }
+
+    setSubmitting(true);
+    setSubResult(null);
+    try {
+      const result = await subscribeStore(modalStore.id, selectedPkg, token);
+      const exp = new Date(result.subscription.expiresAt).toLocaleDateString("id-ID", {
+        day: "numeric", month: "long", year: "numeric",
+      });
+      setSubResult({ ok: true, msg: `Subscription berhasil! Aktif hingga ${exp}.` });
+    } catch (err) {
+      setSubResult({ ok: false, msg: err instanceof Error ? err.message : "Gagal menambah subscription" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleLoadMore = () => navigate(`?offset=${offset + STORE_PAGE_LIMIT}`);
   const handleLogout = () => {
@@ -195,26 +252,35 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-end shrink-0">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          status === "aktif" ? "bg-emerald-400" : status === "trial" ? "bg-blue-400" : "bg-red-400"
-                        }`}
-                      />
-                      <span
-                        className={`text-xs font-medium ${
-                          status === "aktif"
-                            ? "text-emerald-600"
-                            : status === "trial"
-                              ? "text-blue-600"
-                              : "text-red-500"
-                        }`}
-                      >
-                        {status === "aktif" ? "Aktif" : status === "trial" ? "Trial" : "Habis"}
-                      </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            status === "aktif" ? "bg-emerald-400" : status === "trial" ? "bg-blue-400" : "bg-red-400"
+                          }`}
+                        />
+                        <span
+                          className={`text-xs font-medium ${
+                            status === "aktif"
+                              ? "text-emerald-600"
+                              : status === "trial"
+                                ? "text-blue-600"
+                                : "text-red-500"
+                          }`}
+                        >
+                          {status === "aktif" ? "Aktif" : status === "trial" ? "Trial" : "Habis"}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-400 mt-0.5">{txCount} tx</span>
                     </div>
-                    <span className="text-xs text-slate-400 mt-0.5">{txCount} tx</span>
+                    <button
+                      onClick={() => handleOpenModal(store)}
+                      className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                      title="Tambah subscription"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-indigo-500" />
+                    </button>
                   </div>
                 </div>
               );
@@ -232,6 +298,71 @@ export default function DashboardPage() {
           </button>
         )}
       </div>
+
+      {/* Subscribe Modal */}
+      {modalStore && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-semibold text-slate-900">Tambah Subscription</h2>
+              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mb-4">{modalStore.name} · {formatExpiresAt(modalStore.subs)}</p>
+
+            {subResult ? (
+              <div className="flex flex-col items-center py-4 gap-3">
+                {subResult.ok
+                  ? <CheckCircle className="w-12 h-12 text-emerald-500" />
+                  : <XCircle className="w-12 h-12 text-red-400" />
+                }
+                <p className={`text-sm text-center ${subResult.ok ? "text-slate-700" : "text-red-500"}`}>
+                  {subResult.msg}
+                </p>
+                <button
+                  onClick={handleCloseModal}
+                  className="mt-1 w-full py-3 rounded-2xl bg-slate-800 text-white font-semibold text-sm"
+                >
+                  Tutup
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2 mb-4 max-h-64 overflow-y-auto">
+                  {dataPrice.map((p, idx) => {
+                    const selected = selectedPkg === idx;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedPkg(idx)}
+                        className={`flex items-center justify-between px-3.5 py-3 rounded-xl border-2 transition-all text-left ${
+                          selected ? "border-indigo-500 bg-indigo-50" : "border-slate-100 hover:border-slate-200"
+                        }`}
+                      >
+                        <span className={`text-sm font-medium ${selected ? "text-indigo-700" : "text-slate-700"}`}>
+                          {formatDuration(p.time, p.bonus)}
+                        </span>
+                        <span className={`text-sm font-bold ${selected ? "text-indigo-600" : "text-slate-600"}`}>
+                          {formatPrice(p.price)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={handleSubscribe}
+                  disabled={submitting}
+                  className="w-full py-3 rounded-2xl bg-indigo-500 text-white font-semibold text-sm disabled:opacity-60 hover:bg-indigo-600 transition-colors"
+                >
+                  {submitting ? "Memproses..." : `Tambah ${formatPrice(dataPrice[selectedPkg]?.price ?? 0)}`}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

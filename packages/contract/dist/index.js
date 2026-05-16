@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  dataPrice: () => dataPrice,
   loginSchema: () => loginSchema,
   registerSchema: () => registerSchema,
   time: () => time
@@ -44,8 +45,21 @@ var registerSchema = import_zod.z.object({
   username: import_zod.z.string().min(3, "Username minimal 3 karakter").max(50),
   password: import_zod.z.string().min(6, "Password minimal 6 karakter")
 });
+
+// src/subscription.ts
+var DAY = 86400;
+var dataPrice = [
+  { price: 1e3, time: 1 * DAY },
+  { price: 3e3, time: 3 * DAY, bonus: 1 * DAY },
+  { price: 5e3, time: 5 * DAY, bonus: 3 * DAY },
+  { price: 1e4, time: 10 * DAY, bonus: 8 * DAY },
+  { price: 2e4, time: 20 * DAY, bonus: 20 * DAY },
+  { price: 5e4, time: 50 * DAY, bonus: 70 * DAY },
+  { price: 1e5, time: 100 * DAY, bonus: 265 * DAY }
+];
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  dataPrice,
   loginSchema,
   registerSchema,
   time
