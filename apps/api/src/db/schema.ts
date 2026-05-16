@@ -2,6 +2,7 @@ import { relations, type InferInsertModel, type InferSelectModel } from "drizzle
 import { pgTable, varchar, timestamp, integer, uuid, pgEnum } from "drizzle-orm/pg-core";
 
 export const enumRole = pgEnum("role", ["user", "admin", "superadmin"]);
+export const enumBalanceType = pgEnum("balance_type", ["credit", "debit"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -52,7 +53,10 @@ export const balance = pgTable("balance", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  amount: integer("amount").notNull().default(0),
+  type: enumBalanceType().notNull(),
+  amount: integer("amount").notNull(),
+  note: varchar("note", { length: 255 }),
+  paymentId: integer("payment_id").references(() => payment.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -79,6 +83,10 @@ export const balanceRelations = relations(balance, ({ one }) => ({
   user: one(users, {
     fields: [balance.userId],
     references: [users.id],
+  }),
+  payment: one(payment, {
+    fields: [balance.paymentId],
+    references: [payment.id],
   }),
 }));
 
