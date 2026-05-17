@@ -49,13 +49,13 @@ var registerSchema = import_zod.z.object({
 // src/subscription.ts
 var DAY = 86400;
 var dataPrice = [
-  { price: 1e3, time: 1 * DAY },
-  { price: 3e3, time: 3 * DAY, bonus: 1 * DAY },
-  { price: 5e3, time: 5 * DAY, bonus: 3 * DAY },
-  { price: 1e4, time: 10 * DAY, bonus: 8 * DAY },
-  { price: 2e4, time: 20 * DAY, bonus: 20 * DAY },
-  { price: 5e4, time: 50 * DAY, bonus: 70 * DAY },
-  { price: 1e5, time: 100 * DAY, bonus: 265 * DAY }
+  { price: 1e3, time: 1 * DAY, name: "Harian", desc: "Sekali pakai untuk satu rekap." },
+  { price: 3e3, time: 3 * DAY, bonus: 1 * DAY, name: "3 Hari", desc: "Lebih hemat dari harian." },
+  { price: 5e3, time: 5 * DAY, bonus: 3 * DAY, name: "Mingguan", desc: "Cocok untuk seminggu penuh." },
+  { price: 1e4, time: 10 * DAY, bonus: 8 * DAY, name: "2 Minggu", desc: "Hemat untuk dua minggu." },
+  { price: 2e4, time: 20 * DAY, bonus: 20 * DAY, name: "Bulanan", desc: "Paling sering dipilih.", badge: "POPULER" },
+  { price: 5e4, time: 50 * DAY, bonus: 70 * DAY, name: "4 Bulan", desc: "Untuk toko yang aktif." },
+  { price: 1e5, time: 100 * DAY, bonus: 265 * DAY, name: "Tahunan", desc: "Hemat sampai 73%.", badge: "HEMAT" }
 ];
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

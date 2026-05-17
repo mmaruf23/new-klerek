@@ -19,6 +19,13 @@ export const getAllStore = async ({ limit, offset }: PageQuery) => {
   return { data: stores, total, limit, offset, hasNext: offset + limit < total };
 };
 
+export const getStorePublicInfo = async (id: string): Promise<{ id: string; name: string } | undefined> => {
+  return db.query.store.findFirst({
+    where: eq(store.id, id),
+    columns: { id: true, name: true },
+  });
+};
+
 export const getStoreByIDWithLatestSubs = async (id: string): Promise<StoreResponse | undefined> => {
   const storeResult = await db.query.store.findFirst({
     where: eq(store.id, id),

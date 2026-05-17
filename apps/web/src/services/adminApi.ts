@@ -38,6 +38,15 @@ export async function fetchStores(request: Request): Promise<StoreListData> {
   return json.data;
 }
 
+export async function fetchStorePublic(id: string): Promise<{ id: string; name: string }> {
+  const res = await fetch(`${config.API_URL}/store/lookup/${id}`, {
+    credentials: 'include',
+  });
+  const json: ApiResponse<{ id: string; name: string }> = await res.json();
+  if (!json.success || !json.data) throw new Error(json.message ?? 'Toko tidak ditemukan');
+  return json.data;
+}
+
 export async function subscribeStore(
   storeId: string,
   packageIndex: number,

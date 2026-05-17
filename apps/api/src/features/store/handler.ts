@@ -1,11 +1,21 @@
 import type { ApiResponse, JwtClaims } from '@packages/contract';
 import { Hono } from 'hono';
-import { getAllStore, getStoreByIDWithLatestSubs, addSubscriptionByBalance } from './service.js';
+import { getAllStore, getStoreByIDWithLatestSubs, getStorePublicInfo, addSubscriptionByBalance } from './service.js';
 import { isValidStoreID } from './helper.js';
 import { Exception } from '../../error.js';
 import { authMiddleware } from '../auth/middleware.js';
 
 export const storeHandler = new Hono()
+  .get('/lookup/:id', async (c) => {
+    const id = c.req.param('id');
+    if (!isValidStoreID(id)) throw Exception.Validation('invalid store id');
+
+    const data = await getStorePublicInfo(id);
+    if (!data) throw Exception.NotFound('store not found');
+
+    return c.json<ApiResponse<typeof data>>({ success: true, data });
+  })
+
   .get('/', authMiddleware, async (c) => {
     const limit = Math.max(1, Number(c.req.query('limit') ?? 20) || 20);
     const offset = Math.max(0, Number(c.req.query('offset') ?? 0) || 0);
