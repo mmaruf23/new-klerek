@@ -13,11 +13,23 @@ import {
   subsRelations,
   paymentRelations,
   users,
+  balance,
+  balanceRelations,
 } from "./schema.js";
 
 const isProd = config.NODE_ENV === "production";
 const connectionString = config.DATABASE_URL;
-const schema = { store, subscription, payment, users, storeRelations, subsRelations, paymentRelations };
+const schema = {
+  store,
+  subscription,
+  payment,
+  users,
+  balance,
+  storeRelations,
+  subsRelations,
+  paymentRelations,
+  balanceRelations,
+};
 
 export const db = isProd
   ? drizzleNeon({ client: neon(connectionString), schema })
