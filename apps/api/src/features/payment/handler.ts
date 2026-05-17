@@ -2,12 +2,7 @@ import { Hono } from "hono";
 import type { ApiResponse } from "@packages/contract";
 import { cookieMiddleware } from "../auth/middleware.js";
 import { dataPrice } from "../subscription/data.js";
-import {
-  createQris,
-  QrisResult,
-  verifyCallbackSignature,
-  type WijayapayCallback,
-} from "../../utils/wijayapay.js";
+import { createQris, QrisResult, verifyCallbackSignature, type WijayapayCallback } from "../../utils/wijayapay.js";
 import {
   createPendingPayment,
   updatePaymentQris,
@@ -59,7 +54,6 @@ export const paymentHandler = new Hono()
     try {
       qrisResult = await createQris({
         refId,
-        callbackUrl: config.WIJAYAPAY_CALLBACK_URL,
         nominal: pkg.price,
       });
     } catch (err) {
@@ -71,10 +65,7 @@ export const paymentHandler = new Hono()
 
     const updated = await updatePaymentQris(pending.id, qrisResult.qrImage);
 
-    return c.json<ApiResponse<typeof updated>>(
-      { success: true, data: updated },
-      201,
-    );
+    return c.json<ApiResponse<typeof updated>>({ success: true, data: updated }, 201);
   })
 
   // GET /payment/:invoiceId — cek status payment
@@ -97,9 +88,7 @@ export const paymentHandler = new Hono()
     const xSignature = c.req.header("x-signature") ?? "";
 
     if (!verifyCallbackSignature(xSignature, data.ref_id)) {
-      await sendLog(
-        `🔴 CALLBACK SIGNATURE TIDAK VALID\nRef ID: ${data.ref_id}`,
-      );
+      await sendLog(`🔴 CALLBACK SIGNATURE TIDAK VALID\nRef ID: ${data.ref_id}`);
       console.warn("Invalid callback signature for ref_id:", data.ref_id);
       return c.json({ status: false }, 401);
     }
