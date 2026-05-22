@@ -3,7 +3,7 @@ import { db } from "../../db/client.js";
 import { eq, sql } from "drizzle-orm";
 import { users, store, balance } from "../../db/schema.js";
 import { comparePassword, hashPassword } from "../../utils/bcrypt.js";
-import { setClaims } from "../../utils/jwt.js";
+import { setClaims, getClaims } from "../../utils/jwt.js";
 import type { LoginInput, RegisterInput } from "@packages/contract";
 
 const REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -20,14 +20,24 @@ export const login = async (payload: LoginInput) => {
   const validPassword = await comparePassword(payload.password, user.password);
   if (!validPassword) throw Exception.Unauthorized("Username atau Password salah");
 
-  const token = await setClaims({
-    sub: user.id,
-    role: user.role,
-    name: user.name,
-    exp: Math.floor(Date.now() / 1000 + 60 * 10),
-  });
+  const [token, refreshToken] = await Promise.all([
+    setClaims({
+      sub: user.id,
+      role: user.role,
+      name: user.name,
+      type: "access",
+      exp: Math.floor(Date.now() / 1000 + 60 * 10),
+    }),
+    setClaims({
+      sub: user.id,
+      role: user.role,
+      name: user.name,
+      type: "refresh",
+      exp: Math.floor(Date.now() / 1000 + 60 * 60 * 24 * 7),
+    }),
+  ]);
 
-  return { user, token };
+  return { user, token, refreshToken };
 };
 
 export const register = async (payload: RegisterInput) => {
@@ -66,6 +76,24 @@ export const register = async (payload: RegisterInput) => {
     username: user.username,
     referralCode: user.refferalCode,
   };
+};
+
+export const refreshUserToken = async (token: string) => {
+  const claims = await getClaims(token);
+  if (!claims || claims.type !== "refresh" || !claims.sub) throw Exception.Unauthorized();
+
+  const user = await db.query.users.findFirst({ where: eq(users.id, claims.sub) });
+  if (!user) throw Exception.Unauthorized();
+
+  const newToken = await setClaims({
+    sub: user.id,
+    role: user.role,
+    name: user.name,
+    type: "access",
+    exp: Math.floor(Date.now() / 1000 + 60 * 10),
+  });
+
+  return { token: newToken };
 };
 
 export const getBalanceHistory = async (userId: string) => {

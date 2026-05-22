@@ -364,8 +364,8 @@ Di Vercel dashboard, untuk masing-masing project:
 
 ## Hal yang Belum Selesai / Perlu Dikerjakan
 
-- [ ] Refresh token — JWT expire 10 menit, belum ada mekanisme refresh
-- [ ] Halaman frontend untuk payment flow (generate QRIS, tampilkan QR, cek status)
+- [x] Refresh token — JWT expire 10 menit, belum ada mekanisme refresh
+- [x] Halaman frontend untuk payment flow (generate QRIS, tampilkan QR, cek status)
 - [x] Implementasi payment flow (WijayaPay — generate QRIS, callback, auto-extend subscription)
 - [x] Deploy frontend ke Vercel (via `deploy.sh` / Makefile)
 - [x] Halaman admin untuk lihat daftar store

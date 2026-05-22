@@ -5,4 +5,5 @@ export interface JwtClaims extends JwtPayload {
   readonly sub?: string;
   readonly name?: string;
   readonly role?: "superadmin" | "admin" | "user";
+  readonly type?: "access" | "refresh";
 }

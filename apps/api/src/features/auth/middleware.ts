@@ -14,7 +14,7 @@ const jwtMiddleware = jwt({
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   await jwtMiddleware(c, async () => {
     const payload = c.get("jwtPayload") as JwtClaims;
-    if (!payload?.sub) throw Exception.Unauthorized();
+    if (!payload?.sub || payload.type === "refresh") throw Exception.Unauthorized();
     await next();
   });
 };
