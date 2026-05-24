@@ -15,7 +15,13 @@ export const getAllStore = async ({ limit, offset }: PageQuery) => {
   if (!total) {
     return { data: [], total, limit, offset, hasNext: false };
   }
-  const stores = await db.query.store.findMany({ limit, offset });
+  const stores = await db.query.store.findMany({
+    limit,
+    offset,
+    with: {
+      subs: { orderBy: desc(subscription.expiresAt), limit: 1 },
+    },
+  });
   return { data: stores, total, limit, offset, hasNext: offset + limit < total };
 };
 
@@ -33,6 +39,7 @@ export const getStoreByIDWithLatestSubs = async (id: string): Promise<StoreRespo
       subs: {
         where: gt(subscription.expiresAt, new Date()),
         orderBy: desc(subscription.expiresAt),
+        limit: 1,
       },
     },
   });
@@ -67,7 +74,7 @@ export const addSubscriptionByBalance = async (
   const storeData = await db.query.store.findFirst({ where: eq(store.id, storeId) });
   if (!storeData) throw Exception.NotFound("store not found");
 
-  if (storeData.referrerId !== user.refferalCode) throw Exception.Unauthorized();
+  if (userRole === "user" && storeData.referrerId !== user.refferalCode) throw Exception.Unauthorized();
 
   if (userRole !== "superadmin") {
     const currentBalance = await getUserBalance(userId);
@@ -85,18 +92,12 @@ export const addSubscriptionByBalance = async (
     orderBy: (s, { desc }) => [desc(s.expiresAt)],
   });
 
-  const baseTime =
-    activeSub && activeSub.expiresAt.getTime() > Date.now()
-      ? activeSub.expiresAt.getTime()
-      : Date.now();
+  const baseTime = activeSub && activeSub.expiresAt.getTime() > Date.now() ? activeSub.expiresAt.getTime() : Date.now();
 
   const totalMs = (pkg.time + (pkg.bonus ?? 0)) * 1000;
   const expiresAt = new Date(baseTime + totalMs);
 
-  const [newSub] = await db
-    .insert(subscription)
-    .values({ storeId, expiresAt })
-    .returning();
+  const [newSub] = await db.insert(subscription).values({ storeId, expiresAt }).returning();
 
   return { subscription: newSub, debitAmount: userRole !== "superadmin" ? pkg.price : 0 };
 };

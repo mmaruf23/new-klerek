@@ -11,21 +11,13 @@ export const healthHandler = new Hono()
   })
   .get("/db", async (c) => {
     const ok = await checkDB();
-    if (!ok)
-      return c.json<ApiResponse>(
-        { success: false, message: "DB IS NOT OK" },
-        503,
-      );
+    if (!ok) return c.json<ApiResponse>({ success: false, message: "DB IS NOT OK" }, 503);
 
     return c.json<ApiResponse>({ success: true, message: "DB IS OK" });
   })
   .get("/telegram", async (c) => {
     const ok = await pingTelegram();
-    if (!ok)
-      return c.json<ApiResponse>(
-        { success: false, message: "TELEGRAM IS NOT OK" },
-        503,
-      );
+    if (!ok) return c.json<ApiResponse>({ success: false, message: "TELEGRAM IS NOT OK" }, 503);
 
     return c.json<ApiResponse>({ success: true, message: "TELEGRAM IS OK" });
   })

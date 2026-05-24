@@ -1,9 +1,8 @@
-import { ApiResponse } from "@packages/contract";
+import { ApiResponse, time } from "@packages/contract";
 import { Hono } from "hono";
 import { initAndValidateDB, prepareDbBuffer, processDB } from "./service.js";
 import { addNewStore, getStoreByIDWithLatestSubs } from "../store/service.js";
 import { startTrial } from "../subscription/service.js";
-import { DAY } from "../../constants/time.js";
 import { cookieMiddleware } from "../auth/middleware.js";
 import { setClaims } from "../../utils/jwt.js";
 import type { JwtClaims } from "@packages/contract";
@@ -33,6 +32,8 @@ export const clerekHandler = new Hono()
     let store: StoreWithSubs | undefined;
 
     const claims = c.get("jwtPayload") as JwtClaims | undefined;
+
+    // CASE CLAIMS DAN KODE TOKO DI FILE BERBEDA => CEK DB!
     if (claims?.store_id !== storeID) {
       store = await getStoreByIDWithLatestSubs(storeID);
 
@@ -55,7 +56,8 @@ export const clerekHandler = new Hono()
     const data = processDB(db, userID, dateFx);
     db.close();
 
-    if (!claims?.store_id && !store) {
+    // CASE TOKO BARU
+    if (!store) {
       await addNewStore({
         id: data.store_id,
         name: data.store_name,
@@ -65,10 +67,12 @@ export const clerekHandler = new Hono()
       await sendLog(`🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`);
     }
 
-    if (!claims) {
+    // CASE DEVICE BARU
+    console.log(claims?.store_id, storeID);
+    if (!claims || claims.store_id !== storeID) {
       const payload: JwtClaims = {
         store_id: storeID,
-        exp: Math.floor((Date.now() + 7 * DAY) / 1000),
+        exp: Math.floor((Date.now() + 7 * time.DAY) / 1000),
       };
 
       const token = await setClaims(payload);
@@ -78,14 +82,16 @@ export const clerekHandler = new Hono()
         path: "/",
         sameSite: isProd ? "None" : "Lax",
         secure: isProd,
-        maxAge: (7 * DAY) / 1000,
+        maxAge: (7 * time.DAY) / 1000,
       });
       await sendLog("✅ New Issued Token\nToko: " + data.store_id);
     }
 
     c.header(
       "Expires-At",
-      store && store.subs.length ? store.subs[0].expiresAt.getTime().toString() : (Date.now() + 7 * DAY).toString(),
+      store && store.subs.length
+        ? store.subs[0].expiresAt.getTime().toString()
+        : (Date.now() + 7 * time.DAY).toString(),
     );
 
     return c.json<ApiResponse<typeof data>>({ success: true, data });

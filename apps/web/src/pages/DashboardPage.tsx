@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useLoaderData, useNavigate, useNavigation, useSearchParams } from "react-router-dom";
 import { routes } from "@/routes";
 import { Bell, Search, SlidersHorizontal, Plus, CheckCircle, XCircle, X } from "lucide-react";
-import { type StoreListData, subscribeStore } from "@/services/adminApi";
-import type { StoreResponse } from "@packages/contract";
+import { STORE_PAGE_LIMIT, subscribeStore } from "@/services/adminApi";
+import type { ApiResponse, StoreResponse } from "@packages/contract";
 import { dataPrice } from "@packages/contract";
 import { config } from "@/config";
 
@@ -25,7 +25,7 @@ function formatExpiresAt(subs: StoreResponse["subs"]): string {
   return `Aktif hingga ${new Date(active.expiresAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
-const { ACCESS_TOKEN_KEY, USER_DATA_KEY, STORE_PAGE_LIMIT } = config;
+const { ACCESS_TOKEN_KEY, USER_DATA_KEY } = config;
 
 function getUserData() {
   try {
@@ -80,9 +80,7 @@ function getSubStatus(store: StoreResponse): "aktif" | "trial" | "habis" {
   const now = new Date();
   const activeSub = store.subs?.find((s) => new Date(s.expiresAt) > now);
   if (!activeSub) return "habis";
-  const duration = new Date(activeSub.expiresAt).getTime() - new Date(activeSub.createdAt).getTime();
-  const days = duration / (1000 * 60 * 60 * 24);
-  if (days <= 7 && store.subs?.length === 1) return "trial";
+  if (store.subs?.find((s) => s.isTrial)) return "trial";
   return "aktif";
 }
 
@@ -100,7 +98,7 @@ function getSubLabel(subs: StoreResponse["subs"]): string {
 }
 
 export default function DashboardPage() {
-  const stores = useLoaderData() as StoreListData;
+  const stores = useLoaderData() as { data: StoreResponse[]; page: ApiResponse["page"] };
   const navigate = useNavigate();
   const navigation = useNavigation();
   const [searchParams] = useSearchParams();
@@ -135,14 +133,19 @@ export default function DashboardPage() {
   const handleSubscribe = async () => {
     if (!modalStore) return;
     const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
-    if (!token) { navigate(routes.authLogin); return; }
+    if (!token) {
+      navigate(routes.authLogin);
+      return;
+    }
 
     setSubmitting(true);
     setSubResult(null);
     try {
       const result = await subscribeStore(modalStore.id, selectedPkg, token);
       const exp = new Date(result.subscription.expiresAt).toLocaleDateString("id-ID", {
-        day: "numeric", month: "long", year: "numeric",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       });
       setSubResult({ ok: true, msg: `Subscription berhasil! Aktif hingga ${exp}.` });
     } catch (err) {
@@ -183,22 +186,22 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats cards */}
-      <div className="px-5 flex gap-3 overflow-x-auto pb-1">
-        <div className="shrink-0 w-35 bg-indigo-500 rounded-2xl p-4 text-white">
+      <div className="px-5 flex gap-3 pb-1 outline">
+        <div className="flex-1 bg-indigo-500 rounded-2xl p-4 text-white">
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-75">Toko Aktif</p>
-          <p className="text-3xl font-bold mt-1">{activeCount || 147}</p>
-          <p className="text-xs opacity-70 mt-1">+8 minggu ini</p>
+          <p className="text-3xl font-bold mt-1">{activeCount}</p>
+          <p className="text-xs opacity-70 mt-1">+0 minggu ini</p>
         </div>
-        <div className="shrink-0 w-35 bg-slate-800 rounded-2xl p-4 text-white">
+        <div className="flex-1 bg-slate-800 rounded-2xl p-4 text-white">
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-75">Dalam Trial</p>
-          <p className="text-3xl font-bold mt-1">{trialCount || 23}</p>
-          <p className="text-xs opacity-70 mt-1">12 segera habis</p>
+          <p className="text-3xl font-bold mt-1">{trialCount}</p>
+          <p className="text-xs opacity-70 mt-1">0 segera habis</p>
         </div>
-        <div className="shrink-0 w-35 bg-white rounded-2xl p-4">
+        {/* <div className="shrink-0 w-35 bg-white rounded-2xl p-4">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Pendapatan</p>
           <p className="text-2xl font-bold mt-1 text-slate-900">Rp 4.2jt</p>
           <p className="text-xs text-slate-400 mt-1">30 hari</p>
-        </div>
+        </div> */}
       </div>
 
       {/* Search */}
@@ -288,7 +291,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {stores.hasNext && (
+        {stores.page?.hasNext && (
           <button
             onClick={handleLoadMore}
             disabled={loading}
@@ -309,14 +312,17 @@ export default function DashboardPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-xs text-slate-400 mb-4">{modalStore.name} · {formatExpiresAt(modalStore.subs)}</p>
+            <p className="text-xs text-slate-400 mb-4">
+              {modalStore.name} · {formatExpiresAt(modalStore.subs)}
+            </p>
 
             {subResult ? (
               <div className="flex flex-col items-center py-4 gap-3">
-                {subResult.ok
-                  ? <CheckCircle className="w-12 h-12 text-emerald-500" />
-                  : <XCircle className="w-12 h-12 text-red-400" />
-                }
+                {subResult.ok ? (
+                  <CheckCircle className="w-12 h-12 text-emerald-500" />
+                ) : (
+                  <XCircle className="w-12 h-12 text-red-400" />
+                )}
                 <p className={`text-sm text-center ${subResult.ok ? "text-slate-700" : "text-red-500"}`}>
                   {subResult.msg}
                 </p>

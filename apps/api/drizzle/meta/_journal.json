@@ -15,6 +15,13 @@
       "when": 1778933683043,
       "tag": "0001_abandoned_captain_cross",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779607693540,
+      "tag": "0002_happy_hammerhead",
+      "breakpoints": true
     }
   ]
 }

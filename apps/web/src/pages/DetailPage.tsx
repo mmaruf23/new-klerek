@@ -19,8 +19,8 @@ function mockMode(billNo: string): Mode {
   return (["QRIS", "Tunai", "Debit"] as Mode[])[hash % 3];
 }
 
-function extractKasir(header: string): string {
-  const match = header.match(/[Kk]asir[:\s]+([A-Za-z]+)/);
+function extractKasir(header: string | null): string {
+  const match = header?.match(/[Kk]asir[:\s]+([A-Za-z]+)/);
   return match?.[1] ?? "—";
 }
 
@@ -257,7 +257,7 @@ export default function DetailPage() {
                 ) : (
                   desktopRows.map((tx) => {
                     const mode = mockMode(tx.faktur.bill_no);
-                    const kasir = extractKasir(tx.header);
+                    const kasir = extractKasir(tx.body);
                     const isSelected = selected?.faktur.bill_no === tx.faktur.bill_no;
                     return (
                       <div

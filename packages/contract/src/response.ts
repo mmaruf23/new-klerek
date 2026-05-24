@@ -2,6 +2,14 @@ export interface ApiResponse<T = null> {
   success: boolean;
   data?: T;
   message?: string | null;
+  page?: Page;
+}
+
+interface Page {
+  total: number;
+  limit: number;
+  offset: number;
+  hasNext: boolean;
 }
 
 interface Item {
@@ -49,5 +57,6 @@ export interface StoreResponse {
     createdAt: Date;
     storeId: string;
     expiresAt: Date;
+    isTrial: boolean | null;
   }[];
 }

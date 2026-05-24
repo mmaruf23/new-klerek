@@ -5,6 +5,13 @@ interface ApiResponse<T = null> {
     success: boolean;
     data?: T;
     message?: string | null;
+    page?: Page;
+}
+interface Page {
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext: boolean;
 }
 interface Item {
     sort_no: number;
@@ -48,6 +55,7 @@ interface StoreResponse {
         createdAt: Date;
         storeId: string;
         expiresAt: Date;
+        isTrial: boolean | null;
     }[];
 }
 

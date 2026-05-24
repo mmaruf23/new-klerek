@@ -1,5 +1,5 @@
 import { relations, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
-import { pgTable, varchar, timestamp, integer, uuid, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, varchar, timestamp, integer, uuid, pgEnum, boolean } from "drizzle-orm/pg-core";
 
 export const enumRole = pgEnum("role", ["user", "admin", "superadmin"]);
 export const enumBalanceType = pgEnum("balance_type", ["credit", "debit"]);
@@ -28,6 +28,7 @@ export const subscription = pgTable("subscription", {
   storeId: varchar("store_id", { length: 4 })
     .notNull()
     .references(() => store.id, { onDelete: "cascade" }),
+  isTrial: boolean("is_trial"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
 });

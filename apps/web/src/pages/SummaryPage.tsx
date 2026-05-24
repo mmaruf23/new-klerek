@@ -132,7 +132,7 @@ export default function SummaryPage() {
               <span className="text-sm text-slate-400">{fmtDateFull(summary.date_tx)}</span>
             </div>
             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              {summary.store_name}
+              {summary.store_id} {summary.store_name}
               {summary.branch_id && <span className="text-slate-400 font-light"> · {summary.branch_id}</span>}
             </h1>
           </div>
