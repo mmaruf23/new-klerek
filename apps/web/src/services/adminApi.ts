@@ -45,6 +45,19 @@ export async function fetchStorePublic(id: string): Promise<{ id: string; name: 
   return json.data;
 }
 
+export async function submitReferral(referralCode: string): Promise<{ storeId: string; storeName: string; referrerName: string }> {
+  const res = await fetch(`${config.API_URL}/store/refer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ referralCode }),
+  });
+
+  const json: ApiResponse<{ storeId: string; storeName: string; referrerName: string }> = await res.json();
+  if (!json.success || !json.data) throw new Error(json.message ?? "Gagal menyimpan referral");
+  return json.data;
+}
+
 export async function subscribeStore(storeId: string, packageIndex: number, token: string): Promise<SubscribeResult> {
   const res = await fetch(`${config.API_URL}/store/${storeId}/subscribe`, {
     method: "POST",

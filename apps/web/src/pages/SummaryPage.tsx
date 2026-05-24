@@ -1,7 +1,7 @@
 import { Link, useLoaderData, useNavigate } from "react-router-dom";
 import { routes } from "@/routes";
 import type { Summary } from "@packages/contract";
-import { ChevronRight, Download, CalendarDays, Users, Receipt, Package } from "lucide-react";
+import { ChevronRight, Download, CalendarDays, Users, Receipt, Package, Gift } from "lucide-react";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -62,6 +62,16 @@ export default function SummaryPage() {
             <span>{fmtDateFull(summary.date_tx)}</span>
           </div>
         </div>
+
+        {/* Referral banner */}
+        <Link
+          to={routes.refer}
+          className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm"
+        >
+          <Gift className="w-4 h-4 text-amber-500 shrink-0" />
+          <span className="text-amber-800 flex-1">Punya kode referral? Masukkan sekarang</span>
+          <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
+        </Link>
 
         {/* Total Penjualan */}
         <div className="bg-indigo-700 rounded-2xl p-5">
@@ -152,6 +162,16 @@ export default function SummaryPage() {
             </button>
           </div>
         </div>
+
+        {/* Referral banner */}
+        <Link
+          to={routes.refer}
+          className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm w-fit"
+        >
+          <Gift className="w-4 h-4 text-amber-500 shrink-0" />
+          <span className="text-amber-800">Punya kode referral? Masukkan sekarang</span>
+          <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
+        </Link>
 
         {/* Stat cards */}
         <div className="grid grid-cols-4 gap-4">

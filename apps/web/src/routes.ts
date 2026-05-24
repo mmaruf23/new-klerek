@@ -8,4 +8,5 @@ export const routes = {
   authRegister: "/auth/register",
   profile: "/profile",
   dashboard: "/dashboard",
+  refer: "/refer",
 } as const;
