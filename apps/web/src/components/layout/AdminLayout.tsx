@@ -5,7 +5,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 const AdminLayout = () => {
   const location = useLocation();
   return (
-    <div className="min-h-screen bg-[#EDF0F8]">
+    <div className="min-h-svh bg-[#EDF0F8]">
       <div className="max-w-sm mx-auto">
         <Outlet />
 
