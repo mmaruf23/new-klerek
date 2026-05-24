@@ -47,6 +47,19 @@ export const getStoreByIDWithLatestSubs = async (id: string): Promise<StoreRespo
   return storeResult;
 };
 
+export const setStoreReferrer = async (storeId: string, referralCode: string) => {
+  const storeData = await db.query.store.findFirst({ where: eq(store.id, storeId) });
+  if (!storeData) throw Exception.NotFound("toko tidak ditemukan");
+  if (storeData.referrerId) throw Exception.Validation("toko sudah memiliki referrer");
+
+  const referrer = await db.query.users.findFirst({ where: eq(users.refferalCode, referralCode) });
+  if (!referrer) throw Exception.NotFound("kode referral tidak valid");
+
+  await db.update(store).set({ referrerId: referralCode }).where(eq(store.id, storeId));
+
+  return { storeId, storeName: storeData.name, referrerName: referrer.name };
+};
+
 export const addNewStore = async (values: StoreInsert) => {
   const result = await db.insert(store).values(values).onConflictDoNothing();
   if (!result.rowCount) throw Exception.ServerError("Failed add new store to database");

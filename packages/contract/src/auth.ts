@@ -11,6 +11,15 @@ export const registerSchema = z.object({
   password: z.string().min(6, "Password minimal 6 karakter"),
 });
 
+export const referStoreSchema = z.object({
+  referralCode: z
+    .string()
+    .length(6, "Kode referral harus 6 karakter")
+    .regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka"),
+});
+
+export type ReferStoreInput = z.infer<typeof referStoreSchema>;
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 
@@ -46,4 +55,10 @@ export interface RegisterResponse {
   name: string;
   username: string;
   referralCode: string | null;
+}
+
+export interface ReferStoreResponse {
+  storeId: string;
+  storeName: string;
+  referrerName: string;
 }

@@ -16,6 +16,9 @@ var registerSchema = z.object({
   username: z.string().min(3, "Username minimal 3 karakter").max(50),
   password: z.string().min(6, "Password minimal 6 karakter")
 });
+var referStoreSchema = z.object({
+  referralCode: z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
+});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -31,6 +34,7 @@ var dataPrice = [
 export {
   dataPrice,
   loginSchema,
+  referStoreSchema,
   registerSchema,
   time
 };

@@ -1,11 +1,26 @@
-import type { ApiResponse, JwtClaims, StoreResponse } from "@packages/contract";
+import type { ApiResponse, JwtClaims, StoreResponse, ReferStoreResponse } from "@packages/contract";
+import { referStoreSchema } from "@packages/contract";
 import { Hono } from "hono";
-import { getAllStore, getStoreByIDWithLatestSubs, getStorePublicInfo, addSubscriptionByBalance } from "./service.js";
+import { getAllStore, getStoreByIDWithLatestSubs, getStorePublicInfo, addSubscriptionByBalance, setStoreReferrer } from "./service.js";
 import { isValidStoreID } from "./helper.js";
 import { Exception } from "../../error.js";
-import { authMiddleware } from "../auth/middleware.js";
+import { authMiddleware, cookieMiddleware } from "../auth/middleware.js";
 
 export const storeHandler = new Hono()
+  .post("/refer", cookieMiddleware, async (c) => {
+    const claims = c.get("jwtPayload") as JwtClaims | undefined;
+    if (!claims?.store_id) throw Exception.Unauthorized();
+
+    const body = await c.req.json().catch(() => null);
+    const result = referStoreSchema.safeParse(body);
+    if (!result.success) {
+      return c.json<ApiResponse>({ success: false, message: result.error.issues[0].message }, 400);
+    }
+
+    const data = await setStoreReferrer(claims.store_id, result.data.referralCode);
+    return c.json<ApiResponse<ReferStoreResponse>>({ success: true, data });
+  })
+
   .get("/lookup/:id", async (c) => {
     const id = c.req.param("id");
     if (!isValidStoreID(id)) throw Exception.Validation("invalid store id");

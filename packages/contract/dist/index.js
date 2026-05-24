@@ -22,6 +22,7 @@ var index_exports = {};
 __export(index_exports, {
   dataPrice: () => dataPrice,
   loginSchema: () => loginSchema,
+  referStoreSchema: () => referStoreSchema,
   registerSchema: () => registerSchema,
   time: () => time
 });
@@ -45,6 +46,9 @@ var registerSchema = import_zod.z.object({
   username: import_zod.z.string().min(3, "Username minimal 3 karakter").max(50),
   password: import_zod.z.string().min(6, "Password minimal 6 karakter")
 });
+var referStoreSchema = import_zod.z.object({
+  referralCode: import_zod.z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
+});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -61,6 +65,7 @@ var dataPrice = [
 0 && (module.exports = {
   dataPrice,
   loginSchema,
+  referStoreSchema,
   registerSchema,
   time
 });

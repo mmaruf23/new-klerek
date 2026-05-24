@@ -82,6 +82,10 @@ declare const registerSchema: z.ZodObject<{
     username: z.ZodString;
     password: z.ZodString;
 }, z.core.$strip>;
+declare const referStoreSchema: z.ZodObject<{
+    referralCode: z.ZodString;
+}, z.core.$strip>;
+type ReferStoreInput = z.infer<typeof referStoreSchema>;
 type LoginInput = z.infer<typeof loginSchema>;
 type RegisterInput = z.infer<typeof registerSchema>;
 interface ReferredStore {
@@ -114,6 +118,11 @@ interface RegisterResponse {
     username: string;
     referralCode: string | null;
 }
+interface ReferStoreResponse {
+    storeId: string;
+    storeName: string;
+    referrerName: string;
+}
 
 interface SubscriptionPackage {
     price: number;
@@ -125,4 +134,4 @@ interface SubscriptionPackage {
 }
 declare const dataPrice: SubscriptionPackage[];
 
-export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type LoginResponse, type ProfileResponse, type ReferredStore, type RegisterInput, type RegisterResponse, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, loginSchema, registerSchema, time };
+export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RegisterInput, type RegisterResponse, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, loginSchema, referStoreSchema, registerSchema, time };

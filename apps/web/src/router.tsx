@@ -8,6 +8,7 @@ import RegisterPage from "@/pages/auth/RegisterPage";
 import ProfilePage from "@/pages/ProfilePage";
 import DashboardPage from "@/pages/DashboardPage";
 import MembershipPage from "./pages/MembershipPage";
+import ReferPage from "./pages/ReferPage";
 import Layout from "./components/layout/Layout";
 import ContactPage from "./pages/ContactPage";
 import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/authGuard";
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: routes.detail, loader: summaryLoader, element: <DetailPage /> },
       { path: routes.membership, element: <MembershipPage /> },
       { path: routes.contact, element: <ContactPage /> },
+      { path: routes.refer, element: <ReferPage /> },
     ],
   },
   {
