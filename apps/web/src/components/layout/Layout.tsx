@@ -7,7 +7,7 @@ const Layout = () => {
   const location = useLocation();
   return (
     <>
-      <div className="min-h-screen bg-white md:bg-[#EDF0F8] flex flex-col">
+      <div className="min-h-svh bg-white md:bg-[#EDF0F8] flex flex-col">
         {/* ── Desktop navbar ── */}
         <div className="hidden md:block">
           <Navbar />
