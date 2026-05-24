@@ -57,7 +57,7 @@ export const clerekHandler = new Hono()
     db.close();
 
     // CASE TOKO BARU
-    if (!store) {
+    if (!claims && !store) {
       await addNewStore({
         id: data.store_id,
         name: data.store_name,
@@ -68,7 +68,6 @@ export const clerekHandler = new Hono()
     }
 
     // CASE DEVICE BARU
-    console.log(claims?.store_id, storeID);
     if (!claims || claims.store_id !== storeID) {
       const payload: JwtClaims = {
         store_id: storeID,
