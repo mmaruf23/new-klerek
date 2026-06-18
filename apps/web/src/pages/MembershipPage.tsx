@@ -475,7 +475,7 @@ export default function MembershipPage() {
                 onChange={(e) => { setStoreInput(e.target.value.toUpperCase()); setStoreInputError(''); }}
                 maxLength={4}
                 placeholder="ID toko (4 karakter)"
-                className="w-44 text-center text-sm font-mono tracking-widest uppercase border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-400"
+                className="w-44 text-center text-black text-sm font-mono tracking-widest uppercase border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-400"
               />
               <button
                 type="submit"
