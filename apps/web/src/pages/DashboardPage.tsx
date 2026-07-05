@@ -132,16 +132,11 @@ export default function DashboardPage() {
 
   const handleSubscribe = async () => {
     if (!modalStore) return;
-    const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
-    if (!token) {
-      navigate(routes.authLogin);
-      return;
-    }
 
     setSubmitting(true);
     setSubResult(null);
     try {
-      const result = await subscribeStore(modalStore.id, selectedPkg, token);
+      const result = await subscribeStore(modalStore.id, selectedPkg);
       const exp = new Date(result.subscription.expiresAt).toLocaleDateString("id-ID", {
         day: "numeric",
         month: "long",

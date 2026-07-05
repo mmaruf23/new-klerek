@@ -1,4 +1,5 @@
 import { config } from "@/config";
+import { fetchWithAuth } from "@/lib/http";
 import type { ApiResponse, LoginResponse, ProfileResponse } from "@packages/contract";
 
 const { API_URL } = config;
@@ -20,10 +21,8 @@ export async function loginWithGoogle(credential: string): Promise<LoginResponse
   return json.data;
 }
 
-export async function fetchProfile(token: string): Promise<ProfileResponse> {
-  const res = await fetch(`${API_URL}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function fetchProfile(): Promise<ProfileResponse> {
+  const res = await fetchWithAuth("/auth/me");
   if (res.status === 401) throw new Response("Unauthorized", { status: 401 });
   const json: ApiResponse<ProfileResponse> = await res.json();
   if (!json.success || !json.data) throw new Error(json.message ?? "Gagal memuat profil.");

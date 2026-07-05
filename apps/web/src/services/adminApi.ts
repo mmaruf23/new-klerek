@@ -1,6 +1,7 @@
 import { redirect } from "react-router-dom";
 import type { ApiResponse, StoreResponse } from "@packages/contract";
 import { config } from "@/config";
+import { fetchWithAuth } from "@/lib/http";
 import { routes } from "@/routes";
 
 export interface SubscribeResult {
@@ -16,14 +17,10 @@ export interface StoreListData {
 }
 
 export async function fetchStores(request: Request): Promise<StoreListData> {
-  const token = sessionStorage.getItem(config.ACCESS_TOKEN_KEY)!;
-
   const url = new URL(request.url);
   const offset = Number(url.searchParams.get("offset") ?? "0");
 
-  const res = await fetch(`${config.API_URL}/store?limit=${STORE_PAGE_LIMIT}&offset=${offset}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetchWithAuth(`/store?limit=${STORE_PAGE_LIMIT}&offset=${offset}`);
 
   if (res.status === 401) {
     sessionStorage.removeItem(config.ACCESS_TOKEN_KEY);
@@ -58,19 +55,15 @@ export async function submitReferral(referralCode: string): Promise<{ storeId: s
   return json.data;
 }
 
-export async function subscribeStore(storeId: string, packageIndex: number, token: string): Promise<SubscribeResult> {
-  const res = await fetch(`${config.API_URL}/store/${storeId}/subscribe`, {
+export async function subscribeStore(storeId: string, packageIndex: number): Promise<SubscribeResult> {
+  const res = await fetchWithAuth(`/store/${storeId}/subscribe`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ packageIndex }),
   });
 
   const json: ApiResponse<SubscribeResult> = await res.json();
 
-  if (res.status === 401) throw new Error("Toko ini bukan referral Anda");
   if (!json.success || !json.data) throw new Error(json.message ?? "Gagal menambah subscription");
 
   return json.data;

@@ -23,6 +23,10 @@ export class Exception {
   public static Unauthorized(m?: string) {
     return new HTTPException(401, { message: m ? m : "UNAUTHORIZED" });
   }
+
+  public static Forbidden(m?: string) {
+    return new HTTPException(403, { message: m ? m : "FORBIDDEN" });
+  }
 }
 
 export const errorHandler: ErrorHandler = async (err, c) => {

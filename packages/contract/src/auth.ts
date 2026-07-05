@@ -43,6 +43,10 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface RefreshResponse {
+  token: string;
+}
+
 export interface ReferStoreResponse {
   storeId: string;
   storeName: string;

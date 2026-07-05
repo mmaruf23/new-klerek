@@ -13,7 +13,6 @@ import ContactPage from "./pages/ContactPage";
 import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/authGuard";
 import { fetchStores } from "./services/adminApi";
 import { fetchProfile } from "./services/authApi";
-import { config } from "./config";
 import { routes } from "./routes";
 import AdminLayout from "./components/layout/AdminLayout";
 
@@ -28,9 +27,7 @@ function storeLoader({ request }: LoaderFunctionArgs) {
 }
 
 function profileLoader() {
-  const token = sessionStorage.getItem(config.ACCESS_TOKEN_KEY);
-  if (!token) throw redirect(routes.authLogin);
-  return fetchProfile(token);
+  return fetchProfile();
 }
 
 export const router = createBrowserRouter([

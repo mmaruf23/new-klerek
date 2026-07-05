@@ -220,7 +220,7 @@ Origin dikonfigurasi via env var `CORS_ORIGIN` (default `*`). Di production isi 
 
 Semua via class `Exception` di `error.ts` → `HTTPException` Hono:
 - `Validation()` → 409, `BadRequest()` → 400, `NotFound()` → 404
-- `Unauthorized()` → 401, `ServerError()` → 500
+- `Unauthorized()` → 401, `Forbidden()` → 403, `ServerError()` → 500
 
 ### Konfigurasi
 
@@ -283,7 +283,8 @@ src/
 │   ├── adminApi.ts           → fetchStores()
 │   └── uploadApi.ts          → uploadFile()
 ├── lib/
-│   ├── authGuard.ts          → Middleware react-router: requireAuth, requireAdmin, redirectIfAuthenticated
+│   ├── authGuard.ts          → Middleware react-router: requireAuth, requireAdmin, redirectIfAuthenticated (dengan silent refresh)
+│   ├── http.ts               → fetchWithAuth(): bearer + auto-refresh saat 401 (deduped, retry sekali)
 │   └── utils.ts              → cn() utility
 ├── config.ts                 → Config dari env vars (API_URL, ACCESS_TOKEN_KEY, dll)
 └── router.tsx                → Router + export `routes` object

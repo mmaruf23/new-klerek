@@ -106,6 +106,9 @@ interface LoginResponse {
     };
     token: string;
 }
+interface RefreshResponse {
+    token: string;
+}
 interface ReferStoreResponse {
     storeId: string;
     storeName: string;
@@ -122,4 +125,4 @@ interface SubscriptionPackage {
 }
 declare const dataPrice: SubscriptionPackage[];
 
-export { type ApiResponse, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, googleAuthSchema, referStoreSchema, time };
+export { type ApiResponse, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, googleAuthSchema, referStoreSchema, time };

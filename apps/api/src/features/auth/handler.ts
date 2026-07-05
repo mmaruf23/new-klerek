@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { loginWithGoogle, getProfile, getBalanceHistory, refreshUserToken } from "./service.js";
 import { googleAuthSchema } from "@packages/contract";
-import type { ApiResponse, LoginResponse, ProfileResponse } from "@packages/contract";
+import type { ApiResponse, LoginResponse, ProfileResponse, RefreshResponse } from "@packages/contract";
 import { authMiddleware } from "./middleware.js";
 import type { JwtClaims } from "@packages/contract";
 import { setCookie, getCookie } from "hono/cookie";
@@ -37,7 +37,7 @@ export const authHandler = new Hono()
     const refreshToken = getCookie(c, "refresh_token");
     if (!refreshToken) return c.json<ApiResponse>({ success: false, message: "Refresh token tidak ditemukan" }, 401);
     const data = await refreshUserToken(refreshToken);
-    return c.json<ApiResponse<typeof data>>({ success: true, data });
+    return c.json<ApiResponse<RefreshResponse>>({ success: true, data });
   })
   .get("/me", authMiddleware, async (c) => {
     const payload = c.get("jwtPayload") as JwtClaims;

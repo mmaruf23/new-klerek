@@ -87,7 +87,7 @@ export const addSubscriptionByBalance = async (
   const storeData = await db.query.store.findFirst({ where: eq(store.id, storeId) });
   if (!storeData) throw Exception.NotFound("store not found");
 
-  if (userRole === "user" && storeData.referrerId !== user.refferalCode) throw Exception.Unauthorized();
+  if (userRole === "user" && storeData.referrerId !== user.refferalCode) throw Exception.Forbidden("Toko ini bukan referral Anda");
 
   if (userRole !== "superadmin") {
     const currentBalance = await getUserBalance(userId);
