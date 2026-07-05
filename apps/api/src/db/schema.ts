@@ -7,8 +7,9 @@ export const enumBalanceType = pgEnum("balance_type", ["credit", "debit"]);
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
-  username: varchar("username", { length: 255 }).notNull().unique(),
-  password: varchar("password", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  googleId: varchar("google_id", { length: 255 }).notNull().unique(),
+  avatarUrl: varchar("avatar_url", { length: 500 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   role: enumRole().notNull().default("user"),

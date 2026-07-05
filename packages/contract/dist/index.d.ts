@@ -73,21 +73,14 @@ interface JwtClaims extends JwtPayload {
     readonly type?: "access" | "refresh";
 }
 
-declare const loginSchema: z.ZodObject<{
-    username: z.ZodString;
-    password: z.ZodString;
-}, z.core.$strip>;
-declare const registerSchema: z.ZodObject<{
-    name: z.ZodString;
-    username: z.ZodString;
-    password: z.ZodString;
+declare const googleAuthSchema: z.ZodObject<{
+    credential: z.ZodString;
 }, z.core.$strip>;
 declare const referStoreSchema: z.ZodObject<{
     referralCode: z.ZodString;
 }, z.core.$strip>;
 type ReferStoreInput = z.infer<typeof referStoreSchema>;
-type LoginInput = z.infer<typeof loginSchema>;
-type RegisterInput = z.infer<typeof registerSchema>;
+type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 interface ReferredStore {
     id: string;
     name: string;
@@ -97,7 +90,8 @@ interface ReferredStore {
 interface ProfileResponse {
     id: string;
     name: string;
-    username: string;
+    email: string;
+    avatarUrl: string | null;
     role: string;
     referralCode: string | null;
     referredStores: ReferredStore[];
@@ -107,16 +101,10 @@ interface LoginResponse {
     user: {
         id: string;
         name: string;
-        username: string;
+        email: string;
         role: "admin" | "user" | "superadmin";
     };
     token: string;
-}
-interface RegisterResponse {
-    id: string;
-    name: string;
-    username: string;
-    referralCode: string | null;
 }
 interface ReferStoreResponse {
     storeId: string;
@@ -134,4 +122,4 @@ interface SubscriptionPackage {
 }
 declare const dataPrice: SubscriptionPackage[];
 
-export { type ApiResponse, type Data, type JwtClaims, type LoginInput, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RegisterInput, type RegisterResponse, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, loginSchema, referStoreSchema, registerSchema, time };
+export { type ApiResponse, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, googleAuthSchema, referStoreSchema, time };

@@ -31,7 +31,7 @@ function getUserData() {
   try {
     const raw = sessionStorage.getItem(USER_DATA_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as { id: string; name: string; username: string };
+    return JSON.parse(raw) as { id: string; name: string; email: string };
   } catch {
     return null;
   }

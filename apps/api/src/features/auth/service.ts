@@ -2,23 +2,77 @@ import { Exception } from "../../error.js";
 import { db } from "../../db/client.js";
 import { eq, sql } from "drizzle-orm";
 import { users, store, balance } from "../../db/schema.js";
-import { comparePassword, hashPassword } from "../../utils/bcrypt.js";
+import { verifyGoogleIdToken } from "../../utils/googleAuth.js";
 import { setClaims, getClaims } from "../../utils/jwt.js";
-import type { LoginInput, RegisterInput } from "@packages/contract";
+import { sendLog } from "../../utils/telegram.js";
+import { config } from "../../config.js";
+import type { GoogleAuthInput } from "@packages/contract";
 
 const REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 const generateReferralCode = () =>
   Array.from({ length: 6 }, () => REFERRAL_CHARS[Math.floor(Math.random() * REFERRAL_CHARS.length)]).join("");
 
-export const login = async (payload: LoginInput) => {
-  const user = await db.query.users.findFirst({
-    where: eq(users.username, payload.username),
-  });
-  if (!user) throw Exception.Unauthorized("Username atau Password salah");
+const generateUniqueReferralCode = async () => {
+  let referralCode: string;
+  let attempts = 0;
+  do {
+    referralCode = generateReferralCode();
+    const taken = await db.query.users.findFirst({
+      where: eq(users.refferalCode, referralCode),
+    });
+    if (!taken) break;
+    attempts++;
+  } while (attempts < 5);
+  return referralCode!;
+};
 
-  const validPassword = await comparePassword(payload.password, user.password);
-  if (!validPassword) throw Exception.Unauthorized("Username atau Password salah");
+const resolveRole = (email: string): "superadmin" | "admin" | "user" => {
+  if (config.SUPERADMIN_EMAILS.includes(email)) return "superadmin";
+  if (config.ADMIN_EMAILS.includes(email)) return "admin";
+  return "user";
+};
+
+export const loginWithGoogle = async (payload: GoogleAuthInput) => {
+  const profile = await verifyGoogleIdToken(payload.credential);
+  const role = resolveRole(profile.email);
+
+  let user = await db.query.users.findFirst({
+    where: eq(users.email, profile.email),
+  });
+
+  if (!user) {
+    const referralCode = await generateUniqueReferralCode();
+    [user] = await db
+      .insert(users)
+      .values({
+        name: profile.name,
+        email: profile.email,
+        googleId: profile.googleId,
+        avatarUrl: profile.picture,
+        role,
+        refferalCode: referralCode,
+      })
+      .returning();
+    await sendLog(`👤 User baru login via Google: ${user.name} (${user.email}) — role: ${user.role}`);
+  } else if (
+    user.role !== role ||
+    user.name !== profile.name ||
+    user.googleId !== profile.googleId ||
+    user.avatarUrl !== profile.picture
+  ) {
+    [user] = await db
+      .update(users)
+      .set({
+        role,
+        name: profile.name,
+        googleId: profile.googleId,
+        avatarUrl: profile.picture,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+  }
 
   const [token, refreshToken] = await Promise.all([
     setClaims({
@@ -38,44 +92,6 @@ export const login = async (payload: LoginInput) => {
   ]);
 
   return { user, token, refreshToken };
-};
-
-export const register = async (payload: RegisterInput) => {
-  const existing = await db.query.users.findFirst({
-    where: eq(users.username, payload.username),
-  });
-  if (existing) throw Exception.Validation("Username sudah digunakan");
-
-  const hashed = await hashPassword(payload.password);
-
-  let referralCode: string;
-  let attempts = 0;
-  do {
-    referralCode = generateReferralCode();
-    const taken = await db.query.users.findFirst({
-      where: eq(users.refferalCode, referralCode),
-    });
-    if (!taken) break;
-    attempts++;
-  } while (attempts < 5);
-
-  const [user] = await db
-    .insert(users)
-    .values({
-      name: payload.name,
-      username: payload.username,
-      password: hashed,
-      role: "user",
-      refferalCode: referralCode!,
-    })
-    .returning();
-
-  return {
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    referralCode: user.refferalCode,
-  };
 };
 
 export const refreshUserToken = async (token: string) => {
@@ -127,7 +143,8 @@ export const getProfile = async (userId: string) => {
   return {
     id: user.id,
     name: user.name,
-    username: user.username,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
     role: user.role,
     referralCode: user.refferalCode,
     referredStores,

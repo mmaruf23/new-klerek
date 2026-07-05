@@ -1,14 +1,7 @@
 import { z } from "zod";
 
-export const loginSchema = z.object({
-  username: z.string().min(3, "Username wajib diisi"),
-  password: z.string().min(6, "Password wajib diisi"),
-});
-
-export const registerSchema = z.object({
-  name: z.string().min(1, "Nama wajib diisi").max(255),
-  username: z.string().min(3, "Username minimal 3 karakter").max(50),
-  password: z.string().min(6, "Password minimal 6 karakter"),
+export const googleAuthSchema = z.object({
+  credential: z.string().min(1, "Credential wajib diisi"),
 });
 
 export const referStoreSchema = z.object({
@@ -20,8 +13,7 @@ export const referStoreSchema = z.object({
 
 export type ReferStoreInput = z.infer<typeof referStoreSchema>;
 
-export type LoginInput = z.infer<typeof loginSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;
+export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 
 export interface ReferredStore {
   id: string;
@@ -33,7 +25,8 @@ export interface ReferredStore {
 export interface ProfileResponse {
   id: string;
   name: string;
-  username: string;
+  email: string;
+  avatarUrl: string | null;
   role: string;
   referralCode: string | null;
   referredStores: ReferredStore[];
@@ -44,17 +37,10 @@ export interface LoginResponse {
   user: {
     id: string;
     name: string;
-    username: string;
+    email: string;
     role: "admin" | "user" | "superadmin";
   };
   token: string;
-}
-
-export interface RegisterResponse {
-  id: string;
-  name: string;
-  username: string;
-  referralCode: string | null;
 }
 
 export interface ReferStoreResponse {

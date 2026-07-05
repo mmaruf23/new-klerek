@@ -1,21 +1,21 @@
 import { Hono } from "hono";
-import { login, register, getProfile, getBalanceHistory, refreshUserToken } from "./service.js";
-import { loginSchema, registerSchema } from "@packages/contract";
-import type { ApiResponse, LoginResponse, ProfileResponse, RegisterResponse } from "@packages/contract";
+import { loginWithGoogle, getProfile, getBalanceHistory, refreshUserToken } from "./service.js";
+import { googleAuthSchema } from "@packages/contract";
+import type { ApiResponse, LoginResponse, ProfileResponse } from "@packages/contract";
 import { authMiddleware } from "./middleware.js";
 import type { JwtClaims } from "@packages/contract";
 import { setCookie, getCookie } from "hono/cookie";
 import { config } from "../../config.js";
 
 export const authHandler = new Hono()
-  .post("/login", async (c) => {
+  .post("/google", async (c) => {
     const body = await c.req.json().catch(() => null);
-    const result = loginSchema.safeParse(body);
+    const result = googleAuthSchema.safeParse(body);
     if (!result.success) {
       return c.json<ApiResponse>({ success: false, message: result.error.issues[0].message }, 400);
     }
 
-    const { user, token, refreshToken } = await login(result.data);
+    const { user, token, refreshToken } = await loginWithGoogle(result.data);
     const isProduction = config.NODE_ENV === "production";
     setCookie(c, "refresh_token", refreshToken, {
       httpOnly: true,
@@ -24,17 +24,13 @@ export const authHandler = new Hono()
       maxAge: 60 * 60 * 24 * 7,
       path: "/",
     });
-    return c.json<ApiResponse<LoginResponse>>({ success: true, data: { user, token } });
-  })
-  .post("/register", async (c) => {
-    const body = await c.req.json().catch(() => null);
-    const result = registerSchema.safeParse(body);
-    if (!result.success) {
-      return c.json<ApiResponse>({ success: false, message: result.error.issues[0].message }, 400);
-    }
-
-    const user = await register(result.data);
-    return c.json<ApiResponse<RegisterResponse>>({ success: true, data: user }, 201);
+    return c.json<ApiResponse<LoginResponse>>({
+      success: true,
+      data: {
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        token,
+      },
+    });
   })
   .post("/refresh", async (c) => {
     const refreshToken = getCookie(c, "refresh_token");

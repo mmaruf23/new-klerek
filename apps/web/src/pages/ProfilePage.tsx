@@ -43,6 +43,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     sessionStorage.removeItem(config.ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(config.USER_DATA_KEY);
     navigate(routes.authLogin);
   };
 
@@ -69,8 +70,12 @@ export default function ProfilePage() {
         {/* Profile card */}
         <div className="bg-white rounded-3xl p-7 shadow-sm">
           <div className="flex items-start gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0">
-              <User className="w-7 h-7 text-indigo-500" strokeWidth={2} />
+            <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0 overflow-hidden">
+              {profile.avatarUrl ? (
+                <img src={profile.avatarUrl} alt={profile.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-7 h-7 text-indigo-500" strokeWidth={2} />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -82,7 +87,7 @@ export default function ProfilePage() {
                   {ROLE_LABEL[profile.role] ?? profile.role}
                 </span>
               </div>
-              <p className="text-sm text-slate-400">@{profile.username}</p>
+              <p className="text-sm text-slate-400">{profile.email}</p>
             </div>
           </div>
 

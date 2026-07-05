@@ -4,7 +4,6 @@ import HomePage from "@/pages/HomePage";
 import SummaryPage from "@/pages/SummaryPage";
 import DetailPage from "@/pages/DetailPage";
 import LoginPage from "@/pages/auth/LoginPage";
-import RegisterPage from "@/pages/auth/RegisterPage";
 import ProfilePage from "@/pages/ProfilePage";
 import DashboardPage from "@/pages/DashboardPage";
 import MembershipPage from "./pages/MembershipPage";
@@ -58,9 +57,6 @@ export const router = createBrowserRouter([
   {
     path: routes.home,
     middleware: [redirectIfAuthenticatedMiddleware],
-    children: [
-      { path: routes.authLogin, element: <LoginPage /> },
-      { path: routes.authRegister, element: <RegisterPage /> },
-    ],
+    children: [{ path: routes.authLogin, element: <LoginPage /> }],
   },
 ]);

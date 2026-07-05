@@ -47,7 +47,7 @@ pnpm --filter @packages/contract build
 Berisi:
 - `response.ts` — `ApiResponse<T>`, `Summary`, `Data`, `StoreResponse`
 - `jwt.ts` — `JwtClaims` interface (extend `JwtPayload`)
-- `auth.ts` — Zod schemas (`loginSchema`, `registerSchema`) + inferred types (`LoginInput`, `RegisterInput`) + `ProfileResponse`, `ReferredStore`
+- `auth.ts` — Zod schemas (`googleAuthSchema`, `referStoreSchema`) + inferred types (`GoogleAuthInput`, `ReferStoreInput`) + `ProfileResponse`, `LoginResponse`, `ReferredStore`
 - `constant.ts` — konstanta `time`
 
 `JwtClaims` harus selalu diimport dari `@packages/contract`, **bukan** dari `utils/jwt.ts`.
@@ -70,8 +70,8 @@ Berisi:
 | Method | Path | Auth | Deskripsi |
 |--------|------|------|-----------|
 | POST | `/` | cookie (opsional) | Upload zip SQLite, return summary transaksi |
-| POST | `/auth/login` | — | Login → JWT bearer (10 menit) |
-| POST | `/auth/register` | — | Registrasi user baru (role: "user", referral code auto-generate) |
+| POST | `/auth/google` | — | Login/registrasi via Google SSO (kirim `credential` ID token) → JWT bearer (10 menit) + cookie `refresh_token` (7 hari) |
+| POST | `/auth/refresh` | cookie `refresh_token` | Terbitkan access token baru dari refresh token |
 | GET | `/auth/me` | authMiddleware | Profil user yang sedang login + list toko referral + totalBalance |
 | GET | `/auth/balance` | authMiddleware | Riwayat balance user (credit & debit), urut terbaru |
 | GET | `/store` | authMiddleware | List semua store + pagination meta |
@@ -86,21 +86,32 @@ Berisi:
 | GET | `/payment/:invoiceId` | cookie | Cek status payment |
 | POST | `/payment/callback` | — | Webhook WijayaPay (update status + buat subscription + kredit balance referrer 50%) |
 
-### Auth — Dua Jenis JWT (same secret, beda payload)
+### Auth — Google SSO (user/admin) + Store Cookie (kasir)
 
-1. **User/Admin JWT** (bearer, 10 menit): payload `{ sub: userId, role, exp }` — untuk route `/store`, `/auth/me`
-2. **Store Cookie JWT** (7 hari): payload `{ store_id, exp }` — cookie `access_token`, untuk kasir
+**Login user/admin hanya via Google SSO** — tidak ada username/password:
+1. Frontend render tombol Google (GIS via `@react-oauth/google`) → dapat ID token (`credential`)
+2. `POST /auth/google` → backend verifikasi ID token dengan `jose` (JWKS Google, cek issuer + audience `GOOGLE_CLIENT_ID`, wajib `email_verified`) di `src/utils/googleAuth.ts`
+3. Find-or-create user by email — user baru auto-terdaftar (referral code auto-generate)
+4. Role di-evaluasi ulang **setiap login** dari env whitelist: `SUPERADMIN_EMAILS` > `ADMIN_EMAILS` > `user` (promosi/demosi = edit env + re-login)
+5. Backend terbitkan JWT sendiri (bukan token Google)
 
-`authMiddleware` di `auth/middleware.ts` verifikasi signature + wajib ada `sub` claim. Store token ditolak di sini.
+**Tiga jenis JWT aplikasi** (same secret, beda payload):
+1. **Access token** (bearer, 10 menit): payload `{ sub: userId, role, name, type: "access", exp }` — untuk route `/store`, `/auth/me`
+2. **Refresh token** (cookie `refresh_token` httpOnly, 7 hari): payload sama dengan `type: "refresh"` — untuk `POST /auth/refresh`
+3. **Store Cookie JWT** (7 hari): payload `{ store_id, exp }` — cookie `store_token`, untuk kasir
+
+`authMiddleware` di `auth/middleware.ts` verifikasi signature + wajib ada `sub` claim + tolak `type: "refresh"`. Store token ditolak di sini.
 
 Cookie di-set dengan `SameSite=None; Secure` di production (cross-domain FE/BE) dan `SameSite=Lax` di development.
+
+**Setup Google Cloud Console (satu kali):** buat OAuth 2.0 Client ID (Web application), isi Authorized JavaScript origins dengan `http://localhost:5173` + domain web production. Tidak perlu redirect URI (flow popup GIS). Satu client ID dipakai web + api.
 
 ### Validasi Request
 
 Semua endpoint yang menerima body menggunakan Zod `safeParse`. Schema didefinisikan di `@packages/contract/src/auth.ts` dan diimport langsung — tidak ada schema lokal di `apps/api`.
 
 ```ts
-const result = loginSchema.safeParse(body);
+const result = googleAuthSchema.safeParse(body);
 if (!result.success) {
   return c.json({ success: false, message: result.error.issues[0].message }, 400);
 }
@@ -109,7 +120,7 @@ if (!result.success) {
 ### DB Schema
 
 ```
-users:        id (uuid PK), name, username (unique), password (bcrypt),
+users:        id (uuid PK), name, email (unique), googleId (unique), avatarUrl,
               role (enum: user|admin|superadmin, default: user),
               refferalCode (varchar 10, unique), createdAt, updatedAt
 store:        id (varchar 4, PK), name, branchId, createdAt,
@@ -121,10 +132,10 @@ balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 ```
 
 - Store ID: 4 karakter, campuran huruf + angka
-- Referral code: 6 karakter, huruf kapital + angka, auto-generate saat register
+- Referral code: 6 karakter, huruf kapital + angka, auto-generate saat login Google pertama
 - `payment.status`: `pending` → `paid` | `failed` | `expired`
 - `payment.note`: keterangan bebas, bisa diisi admin untuk penambahan manual
-- User admin di-seed via `src/db/seed.ts` (jalankan dengan tsx)
+- Tidak ada seed user — user dibuat otomatis saat login Google; role admin dari env `ADMIN_EMAILS`/`SUPERADMIN_EMAILS` (`src/db/seed.ts` sekarang stub)
 - Kolom `refferalCode` di schema JS (dua 'f') → kolom `referal_code` di DB (satu 'r') — typo lama, jangan diperbaiki tanpa migrasi
 
 ### Alur Upload (`POST /`)
@@ -137,18 +148,19 @@ balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 6. Query SQLite, return `Summary`
 7. Set cookie JWT jika belum ada
 
-### Registrasi User (`POST /auth/register`)
+### Login Google (`POST /auth/google`)
 
-- Field: `name`, `username`, `password` (validasi Zod)
-- Role selalu `"user"` — tidak bisa dipilih dari request
-- Referral code: 6 karakter `A-Z0-9`, generate random, retry max 5x jika collision
-- Return: `{ id, name, username, referralCode }`
+- Body: `{ credential }` (ID token dari GIS, validasi `googleAuthSchema`)
+- User baru: auto-insert dengan `name`/`email`/`googleId`/`avatarUrl` dari Google + referral code 6 karakter `A-Z0-9` (retry max 5x jika collision) + notifikasi Telegram
+- User lama: sync `role`/`name`/`googleId`/`avatarUrl` jika berubah
+- Role dari env whitelist — tidak pernah dari request
+- Return: `LoginResponse` `{ user: { id, name, email, role }, token }` + set cookie `refresh_token`
 
 ### Profil User (`GET /auth/me`)
 
 - Ambil `sub` dari JWT payload → query user
 - Sertakan list store yang `referrerId = user.refferalCode`
-- Return `ProfileResponse`: `{ id, name, username, role, referralCode, referredStores[] }`
+- Return `ProfileResponse`: `{ id, name, email, avatarUrl, role, referralCode, referredStores[], totalBalance }`
 
 ### Payment Flow (WijayaPay)
 
@@ -194,6 +206,7 @@ Event yang dikirim ke Telegram:
 - 🔴 Generate QRIS gagal
 - 🔴 Callback signature tidak valid
 - 🏪 Toko baru terdaftar
+- 👤 User baru login via Google
 - ⚠️ Subscription expired saat upload
 - ✅ Pembayaran berhasil
 
@@ -221,6 +234,9 @@ Semua via class `Exception` di `error.ts` → `HTTPException` Hono:
 | `CORS_ORIGIN` | `*` | URL frontend, contoh: `https://app.vercel.app` |
 | `TELEGRAM_BOT_TOKEN` | `""` | Token bot Telegram |
 | `TELEGRAM_CHAT_ID` | `""` | Chat/group ID tujuan log |
+| `GOOGLE_CLIENT_ID` | `""` | OAuth Client ID Google — cek `aud` saat verifikasi ID token |
+| `ADMIN_EMAILS` | `[]` | Email role admin, pisahkan koma (di-lowercase saat parse) |
+| `SUPERADMIN_EMAILS` | `[]` | Email role superadmin, pisahkan koma |
 | `WIJAYAPAY_MERCHANT_ID` | `""` | Code merchant WijayaPay |
 | `WIJAYAPAY_API_KEY` | `""` | API key WijayaPay |
 | `WIJAYAPAY_BASE_URL` | `https://wijayapay.com/api` | Base URL API WijayaPay |
@@ -251,8 +267,7 @@ src/
 │   ├── DashboardPage.tsx     → Daftar store — admin (/stores)
 │   ├── ProfilePage.tsx       → Profil user + list toko referral (/profile)
 │   └── auth/
-│       ├── LoginPage.tsx     → Login (/auth/login)
-│       └── RegisterPage.tsx  → Registrasi user baru (/auth/register)
+│       └── LoginPage.tsx     → Login via tombol Google (/auth/login)
 ├── components/
 │   ├── layout/
 │   │   ├── Layout.tsx        → Layout publik (Navbar + outlet)
@@ -262,10 +277,9 @@ src/
 │   └── ui/                  → shadcn components (tambah: `pnpm dlx shadcn@latest add <komponen>`)
 ├── hooks/
 │   ├── useUpload.ts          → Upload file, navigate ke /summary setelah sukses
-│   ├── useAdminLogin.ts      → Login admin, simpan token ke sessionStorage
-│   └── useRegister.ts        → Registrasi user baru
+│   └── useGoogleLogin.ts     → Login Google, simpan token ke sessionStorage
 ├── services/
-│   ├── authApi.ts            → loginAdmin(), registerUser(), fetchProfile()
+│   ├── authApi.ts            → loginWithGoogle(), fetchProfile()
 │   ├── adminApi.ts           → fetchStores()
 │   └── uploadApi.ts          → uploadFile()
 ├── lib/
@@ -284,8 +298,7 @@ src/
 | `/detail` | — | Detail transaksi per item |
 | `/membership` | — | Informasi paket membership |
 | `/contact` | — | Kontak |
-| `/auth/login` | redirect jika sudah login | Form login |
-| `/auth/register` | — | Form registrasi user baru |
+| `/auth/login` | redirect jika sudah login | Tombol "Sign in with Google" (GIS) |
 | `/profile` | requireAuth | Profil user + list toko yang direferral |
 | `/stores` | requireAuth | Daftar store + pagination (admin) |
 
@@ -301,9 +314,9 @@ export const routes = {
   membership: "/membership",
   contact: "/contact",
   authLogin: "/auth/login",
-  authRegister: "/auth/register",
   profile: "/profile",
-  stores: "/stores",
+  dashboard: "/dashboard",
+  refer: "/refer",
 } as const;
 ```
 
@@ -326,6 +339,7 @@ Token disimpan di `sessionStorage` dengan key dari `config.ACCESS_TOKEN_KEY`.
 | `VITE_API_URL` | URL backend API (default: kosong = same-origin) |
 | `VITE_ACCESS_TOKEN_KEY` | Key sessionStorage untuk token (default: `access_token`) |
 | `VITE_STORE_PAGE_LIMIT` | Jumlah store per halaman di dashboard (default: 20) |
+| `VITE_GOOGLE_CLIENT_ID` | OAuth Client ID Google untuk tombol GIS (sama dengan `GOOGLE_CLIENT_ID` di api) |
 
 Lihat `apps/web/.env.example` untuk template lengkap.
 
@@ -369,7 +383,8 @@ Di Vercel dashboard, untuk masing-masing project:
 - [x] Implementasi payment flow (WijayaPay — generate QRIS, callback, auto-extend subscription)
 - [x] Deploy frontend ke Vercel (via `deploy.sh` / Makefile)
 - [x] Halaman admin untuk lihat daftar store
-- [x] Registrasi user + halaman register
+- [x] Registrasi user + halaman register (digantikan auto-register via Google SSO)
+- [x] Migrasi auth ke Google SSO (hapus username/password, role via env whitelist)
 - [x] Halaman profil user (referral code + list toko referral)
 - [x] Zod validation untuk semua request body (schema di `@packages/contract`)
 - [x] Route strings dipusatkan di `routes` object — tidak ada hardcoded string path

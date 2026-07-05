@@ -1,37 +1,22 @@
 import { config } from "@/config";
-import type { ApiResponse, LoginResponse, ProfileResponse, RegisterResponse } from "@packages/contract";
+import type { ApiResponse, LoginResponse, ProfileResponse } from "@packages/contract";
 
 const { API_URL } = config;
 
-export async function loginAdmin(username: string, password: string): Promise<LoginResponse> {
+export async function loginWithGoogle(credential: string): Promise<LoginResponse> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/auth/login`, {
+    res = await fetch(`${API_URL}/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      credentials: "include",
+      body: JSON.stringify({ credential }),
     });
   } catch {
     throw new Error("Tidak dapat terhubung ke server.");
   }
   const json: ApiResponse<LoginResponse> = await res.json();
-  if (!json.success || !json.data) throw new Error(json.message ?? "Username atau password salah.");
-  return json.data;
-}
-
-export async function registerUser(name: string, username: string, password: string): Promise<RegisterResponse> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, username, password }),
-    });
-  } catch {
-    throw new Error("Tidak dapat terhubung ke server.");
-  }
-  const json: ApiResponse<RegisterResponse> = await res.json();
-  if (!json.success || !json.data) throw new Error(json.message ?? "Registrasi gagal.");
+  if (!json.success || !json.data) throw new Error(json.message ?? "Login Google gagal.");
   return json.data;
 }
 

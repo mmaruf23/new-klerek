@@ -21,9 +21,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var index_exports = {};
 __export(index_exports, {
   dataPrice: () => dataPrice,
-  loginSchema: () => loginSchema,
+  googleAuthSchema: () => googleAuthSchema,
   referStoreSchema: () => referStoreSchema,
-  registerSchema: () => registerSchema,
   time: () => time
 });
 module.exports = __toCommonJS(index_exports);
@@ -37,14 +36,8 @@ var time = {
 
 // src/auth.ts
 var import_zod = require("zod");
-var loginSchema = import_zod.z.object({
-  username: import_zod.z.string().min(3, "Username wajib diisi"),
-  password: import_zod.z.string().min(6, "Password wajib diisi")
-});
-var registerSchema = import_zod.z.object({
-  name: import_zod.z.string().min(1, "Nama wajib diisi").max(255),
-  username: import_zod.z.string().min(3, "Username minimal 3 karakter").max(50),
-  password: import_zod.z.string().min(6, "Password minimal 6 karakter")
+var googleAuthSchema = import_zod.z.object({
+  credential: import_zod.z.string().min(1, "Credential wajib diisi")
 });
 var referStoreSchema = import_zod.z.object({
   referralCode: import_zod.z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
@@ -64,8 +57,7 @@ var dataPrice = [
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   dataPrice,
-  loginSchema,
+  googleAuthSchema,
   referStoreSchema,
-  registerSchema,
   time
 });

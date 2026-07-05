@@ -1,70 +1,12 @@
-import {
-  useState,
-  type Dispatch,
-  type FC,
-  type HTMLInputAutoCompleteAttribute,
-  type HTMLInputTypeAttribute,
-  type SetStateAction,
-  type SubmitEventHandler,
-} from "react";
-import { Lock, Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useAdminLogin } from "@/hooks/useAdminLogin";
-import { routes } from "@/routes";
-
-interface FieldProps {
-  label: string;
-  value: string;
-  placeholder: string;
-  type?: HTMLInputTypeAttribute;
-  setValue: Dispatch<SetStateAction<string>>;
-}
-const Field: FC<FieldProps> = ({ label, value, placeholder, type, setValue }) => {
-  const [showPassword, setShowPassword] = useState(false);
-
-  function autoCompleteAttribute(label: string): HTMLInputAutoCompleteAttribute | undefined {
-    if (label.toLocaleLowerCase() == "username") return "username";
-    if (label.toLocaleLowerCase() == "password") return "current-password";
-    return undefined;
-  }
-
-  return (
-    <div className="space-y-2">
-      <label className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">{label}</label>
-      <div className="relative">
-        <input
-          type={type && showPassword ? "text" : type}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={placeholder}
-          required
-          autoComplete={autoCompleteAttribute(label)}
-          className="w-full bg-white rounded-2xl px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm outline-none"
-        />
-        {type == "password" && (
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
+import { useState } from "react";
+import { Lock } from "lucide-react";
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
+import { useGoogleLogin } from "@/hooks/useGoogleLogin";
+import { config } from "@/config";
 
 const LoginPage = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const { login, loading, error } = useAdminLogin();
-
-  const handleSubmit: SubmitEventHandler = async (e) => {
-    e.preventDefault();
-    await login(username, password);
-  };
+  const { login, loading, error } = useGoogleLogin();
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-[#EDF0F8] flex justify-center">
@@ -89,51 +31,33 @@ const LoginPage = () => {
             <Lock className="w-7 h-7 text-indigo-500" strokeWidth={2.5} />
           </div>
 
-          <h1 className="text-[2rem] font-bold text-slate-900 leading-tight mb-2">Konsol Admin</h1>
+          <h1 className="text-[2rem] font-bold text-slate-900 leading-tight mb-2">Masuk</h1>
           <p className="text-slate-500 text-sm leading-relaxed mb-9">
-            Masuk untuk mengelola toko, membership, dan riwayat upload.
+            Masuk dengan akun Google untuk mengelola toko, membership, dan riwayat upload. Akun baru otomatis
+            terdaftar saat pertama kali masuk.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Field label="Username" value={username} setValue={setUsername} placeholder="username" type="text" />
-            <Field label="Password" value={password} setValue={setPassword} placeholder="password" type="password" />
+          <div className="space-y-5">
+            <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID}>
+              <GoogleLogin
+                onSuccess={(response) => {
+                  setGoogleError(null);
+                  if (response.credential) login(response.credential);
+                }}
+                onError={() => setGoogleError("Login Google gagal. Coba lagi.")}
+                width="352"
+                text="signin_with"
+              />
+            </GoogleOAuthProvider>
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded accent-indigo-500"
-                />
-                Ingat saya
-              </label>
-              <button
-                type="button"
-                className="text-sm text-indigo-500 font-medium hover:text-indigo-600 transition-colors"
-              >
-                Lupa password?
-              </button>
-            </div>
-
-            {error && <p className="text-sm text-red-500">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white font-semibold py-4 rounded-2xl text-base transition-colors disabled:opacity-60 shadow-lg shadow-indigo-200 mt-2"
-            >
-              {loading ? "Memproses..." : "Masuk"}
-            </button>
-          </form>
+            {loading && <p className="text-sm text-slate-500">Memproses...</p>}
+            {(error ?? googleError) && <p className="text-sm text-red-500">{error ?? googleError}</p>}
+          </div>
         </div>
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-400 leading-relaxed px-8 pb-10 pt-8">
-          Belum punya akun?{" "}
-          <Link to={routes.authRegister} className="text-indigo-500 font-medium hover:text-indigo-600 transition-colors">
-            Daftar di sini
-          </Link>
+          Kode referral kamu bisa dilihat di halaman profil setelah masuk.
         </p>
       </div>
     </div>

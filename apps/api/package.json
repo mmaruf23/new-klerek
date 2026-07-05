@@ -14,11 +14,11 @@
     "@packages/contract": "workspace:*",
     "@types/adm-zip": "^0.5.7",
     "adm-zip": "^0.5.16",
-    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^17.4.0",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.12.9",
+    "jose": "^6.2.3",
     "pg": "^8.20.0",
     "zod": "^4.4.3"
   },

@@ -7,14 +7,8 @@ var time = {
 
 // src/auth.ts
 import { z } from "zod";
-var loginSchema = z.object({
-  username: z.string().min(3, "Username wajib diisi"),
-  password: z.string().min(6, "Password wajib diisi")
-});
-var registerSchema = z.object({
-  name: z.string().min(1, "Nama wajib diisi").max(255),
-  username: z.string().min(3, "Username minimal 3 karakter").max(50),
-  password: z.string().min(6, "Password minimal 6 karakter")
+var googleAuthSchema = z.object({
+  credential: z.string().min(1, "Credential wajib diisi")
 });
 var referStoreSchema = z.object({
   referralCode: z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
@@ -33,8 +27,7 @@ var dataPrice = [
 ];
 export {
   dataPrice,
-  loginSchema,
+  googleAuthSchema,
   referStoreSchema,
-  registerSchema,
   time
 };

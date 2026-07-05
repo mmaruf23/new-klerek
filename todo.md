@@ -6,4 +6,4 @@
 
 ## Feature
 - [ ] simpan rekap transaksi ke db make sure jangan duplikat
-- [ ] anything else
+- [x] update implementasi auth akun pake sso google aja.

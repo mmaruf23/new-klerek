@@ -22,6 +22,20 @@
       "when": 1779607693540,
       "tag": "0002_happy_hammerhead",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783242197259,
+      "tag": "0003_salty_pretty_boy",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783242221924,
+      "tag": "0004_chemical_blade",
+      "breakpoints": true
     }
   ]
 }

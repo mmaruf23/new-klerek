@@ -1,32 +1,9 @@
 // run this file with tsx, to seed the database.
 
-import { hashPassword } from "../utils/bcrypt.js";
-import { db } from "./client.js";
-import { users } from "./schema.js";
-
 async function main() {
-  console.log("Seeding started...");
-  await db.insert(users).values([
-    {
-      name: "Super Admin",
-      username: "superadmin",
-      password: await hashPassword("Admin@1234"),
-      role: "superadmin",
-    },
-    {
-      name: "Admin",
-      username: "admin",
-      password: await hashPassword("Admin@1234"),
-      role: "admin",
-    },
-    {
-      name: "User",
-      username: "user",
-      password: await hashPassword("password"),
-      role: "user",
-    },
-  ]);
-  console.log("Seeding finished!");
+  console.log("Tidak ada user yang di-seed.");
+  console.log("User dibuat otomatis saat login Google pertama kali.");
+  console.log("Role admin/superadmin diatur via env ADMIN_EMAILS / SUPERADMIN_EMAILS.");
   process.exit(0);
 }
 
