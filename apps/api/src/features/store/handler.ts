@@ -36,8 +36,6 @@ export const storeHandler = new Hono()
     const offset = Math.max(0, Number(c.req.query("offset") ?? 0) || 0);
     const { data, ...page } = await getAllStore({ limit, offset });
 
-    console.log(data);
-
     return c.json<ApiResponse<StoreResponse[]>>({
       success: true,
       data: data,

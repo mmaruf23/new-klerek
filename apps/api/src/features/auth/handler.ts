@@ -6,6 +6,7 @@ import { authMiddleware } from "./middleware.js";
 import type { JwtClaims } from "@packages/contract";
 import { setCookie, getCookie } from "hono/cookie";
 import { config } from "../../config.js";
+import { Balance } from "../../db/schema.js";
 
 export const authHandler = new Hono()
   .post("/google", async (c) => {
@@ -36,7 +37,7 @@ export const authHandler = new Hono()
     const refreshToken = getCookie(c, "refresh_token");
     if (!refreshToken) return c.json<ApiResponse>({ success: false, message: "Refresh token tidak ditemukan" }, 401);
     const data = await refreshUserToken(refreshToken);
-    return c.json<ApiResponse<{ token: string }>>({ success: true, data });
+    return c.json<ApiResponse<typeof data>>({ success: true, data });
   })
   .get("/me", authMiddleware, async (c) => {
     const payload = c.get("jwtPayload") as JwtClaims;
@@ -46,5 +47,5 @@ export const authHandler = new Hono()
   .get("/balance", authMiddleware, async (c) => {
     const payload = c.get("jwtPayload") as JwtClaims;
     const history = await getBalanceHistory(payload.sub!);
-    return c.json<ApiResponse<typeof history>>({ success: true, data: history });
+    return c.json<ApiResponse<Balance[]>>({ success: true, data: history });
   });
