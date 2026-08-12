@@ -13,6 +13,11 @@ var googleAuthSchema = z.object({
 var referStoreSchema = z.object({
   referralCode: z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
 });
+var balanceAdjustSchema = z.object({
+  type: z.enum(["credit", "debit"], { message: "Tipe harus credit atau debit" }),
+  amount: z.number().int().positive("Jumlah harus lebih dari 0"),
+  note: z.string().max(255).optional()
+});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -26,6 +31,7 @@ var dataPrice = [
   { price: 1e5, time: 100 * DAY, bonus: 265 * DAY, name: "Tahunan", desc: "Hemat sampai 73%.", badge: "HEMAT" }
 ];
 export {
+  balanceAdjustSchema,
   dataPrice,
   googleAuthSchema,
   referStoreSchema,

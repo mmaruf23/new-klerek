@@ -114,6 +114,29 @@ interface ReferStoreResponse {
     storeName: string;
     referrerName: string;
 }
+interface AdminUserItem {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+    role: "user" | "admin" | "superadmin";
+    referralCode: string | null;
+    totalBalance: number;
+    referredStoreCount: number;
+    createdAt: Date;
+}
+interface AdminUserDetail extends AdminUserItem {
+    referredStores: ReferredStore[];
+}
+declare const balanceAdjustSchema: z.ZodObject<{
+    type: z.ZodEnum<{
+        credit: "credit";
+        debit: "debit";
+    }>;
+    amount: z.ZodNumber;
+    note: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+type BalanceAdjustInput = z.infer<typeof balanceAdjustSchema>;
 
 interface SubscriptionPackage {
     price: number;
@@ -125,4 +148,4 @@ interface SubscriptionPackage {
 }
 declare const dataPrice: SubscriptionPackage[];
 
-export { type ApiResponse, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type StoreResponse, type SubscriptionPackage, type Summary, dataPrice, googleAuthSchema, referStoreSchema, time };
+export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, googleAuthSchema, referStoreSchema, time };

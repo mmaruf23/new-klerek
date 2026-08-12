@@ -8,10 +8,12 @@ import ProfilePage from "@/pages/ProfilePage";
 import DashboardPage from "@/pages/DashboardPage";
 import MembershipPage from "./pages/MembershipPage";
 import ReferPage from "./pages/ReferPage";
+import UsersPage from "./pages/admin/UsersPage";
 import Layout from "./components/layout/Layout";
 import ContactPage from "./pages/ContactPage";
 import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/authGuard";
 import { fetchStores } from "./services/adminApi";
+import { fetchUsers } from "./services/adminUsersApi";
 import { fetchProfile } from "./services/authApi";
 import { routes } from "./routes";
 import AdminLayout from "./components/layout/AdminLayout";
@@ -49,6 +51,7 @@ export const router = createBrowserRouter([
     children: [
       { path: routes.dashboard, middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
       { path: routes.profile, middleware: [requireAuthMiddleware], loader: profileLoader, element: <ProfilePage /> },
+      { path: routes.adminUsers, middleware: [requireAuthMiddleware], loader: ({ request }: LoaderFunctionArgs) => fetchUsers(request), element: <UsersPage /> },
     ],
   },
   {
