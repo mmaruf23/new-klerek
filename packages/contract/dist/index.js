@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  balanceAdjustSchema: () => balanceAdjustSchema,
   dataPrice: () => dataPrice,
   googleAuthSchema: () => googleAuthSchema,
   referStoreSchema: () => referStoreSchema,
@@ -42,6 +43,11 @@ var googleAuthSchema = import_zod.z.object({
 var referStoreSchema = import_zod.z.object({
   referralCode: import_zod.z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
 });
+var balanceAdjustSchema = import_zod.z.object({
+  type: import_zod.z.enum(["credit", "debit"], { message: "Tipe harus credit atau debit" }),
+  amount: import_zod.z.number().int().positive("Jumlah harus lebih dari 0"),
+  note: import_zod.z.string().max(255).optional()
+});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -56,6 +62,7 @@ var dataPrice = [
 ];
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  balanceAdjustSchema,
   dataPrice,
   googleAuthSchema,
   referStoreSchema,

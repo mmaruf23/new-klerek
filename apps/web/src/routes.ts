@@ -8,4 +8,5 @@ export const routes = {
   profile: "/profile",
   dashboard: "/dashboard",
   refer: "/refer",
+  adminUsers: "/admin/users",
 } as const;

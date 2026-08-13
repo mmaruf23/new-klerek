@@ -52,3 +52,27 @@ export interface ReferStoreResponse {
   storeName: string;
   referrerName: string;
 }
+
+export interface AdminUserItem {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  role: "user" | "admin" | "superadmin";
+  referralCode: string | null;
+  totalBalance: number;
+  referredStoreCount: number;
+  createdAt: Date;
+}
+
+export interface AdminUserDetail extends AdminUserItem {
+  referredStores: ReferredStore[];
+}
+
+export const balanceAdjustSchema = z.object({
+  type: z.enum(["credit", "debit"], { message: "Tipe harus credit atau debit" }),
+  amount: z.number().int().positive("Jumlah harus lebih dari 0"),
+  note: z.string().max(255).optional(),
+});
+
+export type BalanceAdjustInput = z.infer<typeof balanceAdjustSchema>;
