@@ -88,7 +88,7 @@ function UserDetailModal({
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             {view === "adjust" && (
-              <button onClick={() => setAdjust((s) => ({ ...s, done: false, error: null, amount: "", note: "" })) || setView("detail")} className="text-slate-400 hover:text-slate-600 mr-1">
+              <button onClick={() => { setAdjust((s) => ({ ...s, done: false, error: null, amount: "", note: "" })); setView("detail"); }} className="text-slate-400 hover:text-slate-600 mr-1">
                 <ChevronRight className="w-4 h-4 rotate-180" />
               </button>
             )}
