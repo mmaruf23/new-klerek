@@ -1,6 +1,7 @@
 import AdmZip from 'adm-zip';
 import BetterSqlite3 from 'better-sqlite3';
 import {
+  isValidDateTX,
   isValidUserID,
   mapToResponseObject,
   parseFakturPrefix,
@@ -14,7 +15,10 @@ interface DBParams {
   buffer: Buffer;
   userID: string;
   storeID: string;
+  /** prefix DDMM untuk filter faktur di SQLite */
   dateFx: string;
+  /** tanggal transaksi asli dari nama file, format YYYY-MM-DD */
+  dateTX: string;
 }
 
 export const prepareDbBuffer = async (
@@ -35,12 +39,13 @@ export const prepareDbBuffer = async (
 
   const [storeID, dateTX, userID] = dbFile.name.split('_');
 
-  if (!isValidStoreID(storeID) || !isValidUserID(userID))
+  if (!isValidStoreID(storeID) || !isValidUserID(userID) || !isValidDateTX(dateTX))
     throw Exception.BadRequest('invalid file content format');
 
   return {
     storeID,
     dateFx: parseFakturPrefix(dateTX),
+    dateTX,
     userID,
     buffer: dbFile.getData(),
   };

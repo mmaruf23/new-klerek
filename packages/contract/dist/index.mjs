@@ -33,11 +33,32 @@ var dataPrice = [
   { price: 5e4, time: 50 * DAY, bonus: 70 * DAY, name: "4 Bulan", desc: "Untuk toko yang aktif." },
   { price: 1e5, time: 100 * DAY, bonus: 265 * DAY, name: "Tahunan", desc: "Hemat sampai 73%.", badge: "HEMAT" }
 ];
+
+// src/transaction.ts
+import { z as z2 } from "zod";
+var dateOnly = z2.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD");
+var transactionQuerySchema = z2.object({
+  storeId: z2.string().length(4, "Store ID harus 4 karakter").optional(),
+  userId: z2.string().max(8).optional(),
+  /** tanggal tunggal — kalau diisi, `from`/`to` diabaikan */
+  date: dateOnly.optional(),
+  from: dateOnly.optional(),
+  to: dateOnly.optional(),
+  /** cari di no faktur, bill no, nama/no/telepon member, dan nama toko */
+  q: z2.string().trim().min(1).max(100).optional(),
+  limit: z2.coerce.number().int().min(1).max(100).default(20),
+  offset: z2.coerce.number().int().min(0).default(0),
+  sort: z2.enum(["newest", "oldest"]).default("newest")
+}).refine((v) => !v.from || !v.to || v.from <= v.to, {
+  message: "Tanggal `from` tidak boleh lebih besar dari `to`",
+  path: ["from"]
+});
 export {
   balanceAdjustSchema,
   dataPrice,
   googleAuthSchema,
   referStoreSchema,
   roleUpdateSchema,
-  time
+  time,
+  transactionQuerySchema
 };

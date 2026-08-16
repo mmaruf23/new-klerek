@@ -25,7 +25,8 @@ __export(index_exports, {
   googleAuthSchema: () => googleAuthSchema,
   referStoreSchema: () => referStoreSchema,
   roleUpdateSchema: () => roleUpdateSchema,
-  time: () => time
+  time: () => time,
+  transactionQuerySchema: () => transactionQuerySchema
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -64,6 +65,26 @@ var dataPrice = [
   { price: 5e4, time: 50 * DAY, bonus: 70 * DAY, name: "4 Bulan", desc: "Untuk toko yang aktif." },
   { price: 1e5, time: 100 * DAY, bonus: 265 * DAY, name: "Tahunan", desc: "Hemat sampai 73%.", badge: "HEMAT" }
 ];
+
+// src/transaction.ts
+var import_zod2 = require("zod");
+var dateOnly = import_zod2.z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD");
+var transactionQuerySchema = import_zod2.z.object({
+  storeId: import_zod2.z.string().length(4, "Store ID harus 4 karakter").optional(),
+  userId: import_zod2.z.string().max(8).optional(),
+  /** tanggal tunggal — kalau diisi, `from`/`to` diabaikan */
+  date: dateOnly.optional(),
+  from: dateOnly.optional(),
+  to: dateOnly.optional(),
+  /** cari di no faktur, bill no, nama/no/telepon member, dan nama toko */
+  q: import_zod2.z.string().trim().min(1).max(100).optional(),
+  limit: import_zod2.z.coerce.number().int().min(1).max(100).default(20),
+  offset: import_zod2.z.coerce.number().int().min(0).default(0),
+  sort: import_zod2.z.enum(["newest", "oldest"]).default("newest")
+}).refine((v) => !v.from || !v.to || v.from <= v.to, {
+  message: "Tanggal `from` tidak boleh lebih besar dari `to`",
+  path: ["from"]
+});
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   balanceAdjustSchema,
@@ -71,5 +92,6 @@ var dataPrice = [
   googleAuthSchema,
   referStoreSchema,
   roleUpdateSchema,
-  time
+  time,
+  transactionQuerySchema
 });

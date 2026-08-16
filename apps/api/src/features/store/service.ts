@@ -47,6 +47,22 @@ export const getStoreByIDWithLatestSubs = async (id: string): Promise<StoreRespo
   return storeResult;
 };
 
+/** ID toko yang direferral user — dipakai untuk membatasi akses data toko. */
+export const getReferredStoreIds = async (userId: string): Promise<string[]> => {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { refferalCode: true },
+  });
+  if (!user?.refferalCode) return [];
+
+  const rows = await db.query.store.findMany({
+    where: eq(store.referrerId, user.refferalCode),
+    columns: { id: true },
+  });
+
+  return rows.map((r) => r.id);
+};
+
 export const setStoreReferrer = async (storeId: string, referralCode: string) => {
   const storeData = await db.query.store.findFirst({ where: eq(store.id, storeId) });
   if (!storeData) throw Exception.NotFound("toko tidak ditemukan");

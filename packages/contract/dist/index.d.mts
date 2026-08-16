@@ -155,4 +155,50 @@ interface SubscriptionPackage {
 }
 declare const dataPrice: SubscriptionPackage[];
 
-export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, googleAuthSchema, referStoreSchema, roleUpdateSchema, time };
+declare const transactionQuerySchema: z.ZodObject<{
+    storeId: z.ZodOptional<z.ZodString>;
+    userId: z.ZodOptional<z.ZodString>;
+    date: z.ZodOptional<z.ZodString>;
+    from: z.ZodOptional<z.ZodString>;
+    to: z.ZodOptional<z.ZodString>;
+    q: z.ZodOptional<z.ZodString>;
+    limit: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+    offset: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
+    sort: z.ZodDefault<z.ZodEnum<{
+        newest: "newest";
+        oldest: "oldest";
+    }>>;
+}, z.core.$strip>;
+type TransactionQueryInput = z.infer<typeof transactionQuerySchema>;
+interface TransactionItem {
+    sort_no: number;
+    plu: number;
+    qty: number;
+}
+interface TransactionListItem {
+    id: number;
+    storeId: string;
+    storeName: string;
+    /** ID kasir yang mengunggah */
+    userId: string;
+    /** YYYY-MM-DD */
+    dateTx: string;
+    billNo: string;
+    noFaktur: string;
+    cash: number;
+    timeTx: string | null;
+    memberNo: string | null;
+    memberName: string | null;
+    itemCount: number;
+    createdAt: Date;
+}
+interface TransactionDetail extends TransactionListItem {
+    memberPhone: string | null;
+    header: string | null;
+    body: string | null;
+    addtl: string | null;
+    footer: string | null;
+    items: TransactionItem[];
+}
+
+export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, type TransactionDetail, type TransactionItem, type TransactionListItem, type TransactionQueryInput, balanceAdjustSchema, dataPrice, googleAuthSchema, referStoreSchema, roleUpdateSchema, time, transactionQuerySchema };
