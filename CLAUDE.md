@@ -85,6 +85,10 @@ Berisi:
 | GET | `/payment` | cookie | List semua payment milik store |
 | GET | `/payment/:invoiceId` | cookie | Cek status payment |
 | POST | `/payment/callback` | — | Webhook WijayaPay (update status + buat subscription + kredit balance referrer 50%) |
+| GET | `/admin/users` | authMiddleware + admin | List user + pagination + search `q` (nama/email) |
+| GET | `/admin/users/:id` | authMiddleware + admin | Detail user + toko referral + balance |
+| POST | `/admin/users/:id/balance` | authMiddleware + admin | Sesuaikan balance user manual (credit/debit + note) |
+| POST | `/admin/users/:id/role` | authMiddleware + superadmin | Ubah role user (`admin` ⇄ `user`); tolak self & target superadmin |
 
 ### Auth — Google SSO (user/admin) + Store Cookie (kasir)
 
@@ -92,7 +96,7 @@ Berisi:
 1. Frontend render tombol Google (GIS via `@react-oauth/google`) → dapat ID token (`credential`)
 2. `POST /auth/google` → backend verifikasi ID token dengan `jose` (JWKS Google, cek issuer + audience `GOOGLE_CLIENT_ID`, wajib `email_verified`) di `src/utils/googleAuth.ts`
 3. Find-or-create user by email — user baru auto-terdaftar (referral code auto-generate)
-4. Role di-evaluasi ulang **setiap login** dari env whitelist: `SUPERADMIN_EMAILS` > `ADMIN_EMAILS` > `user` (promosi/demosi = edit env + re-login)
+4. **Role bersifat DB-authoritative** — tidak ada whitelist env. User baru selalu `user`; login tidak pernah menimpa role user lama (hanya sync `name`/`googleId`/`avatarUrl`). Promosi/demosi `admin` ⇄ `user` via panel superadmin (`POST /admin/users/:id/role`); superadmin pertama dibuat via seed bootstrap (`src/db/seed.ts`)
 5. Backend terbitkan JWT sendiri (bukan token Google)
 
 **Tiga jenis JWT aplikasi** (same secret, beda payload):
@@ -135,7 +139,7 @@ balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 - Referral code: 6 karakter, huruf kapital + angka, auto-generate saat login Google pertama
 - `payment.status`: `pending` → `paid` | `failed` | `expired`
 - `payment.note`: keterangan bebas, bisa diisi admin untuk penambahan manual
-- Tidak ada seed user — user dibuat otomatis saat login Google; role admin dari env `ADMIN_EMAILS`/`SUPERADMIN_EMAILS` (`src/db/seed.ts` sekarang stub)
+- Tidak ada seed user — user dibuat otomatis saat login Google (selalu role `user`). Role adalah DB-authoritative: superadmin pertama di-bootstrap via `src/db/seed.ts` (`pnpm --filter api exec tsx ./src/db/seed.ts <email>`), selanjutnya admin ⇄ user via panel superadmin
 - Kolom `refferalCode` di schema JS (dua 'f') → kolom `referal_code` di DB (satu 'r') — typo lama, jangan diperbaiki tanpa migrasi
 
 ### Alur Upload (`POST /`)
@@ -152,8 +156,8 @@ balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 
 - Body: `{ credential }` (ID token dari GIS, validasi `googleAuthSchema`)
 - User baru: auto-insert dengan `name`/`email`/`googleId`/`avatarUrl` dari Google + referral code 6 karakter `A-Z0-9` (retry max 5x jika collision) + notifikasi Telegram
-- User lama: sync `role`/`name`/`googleId`/`avatarUrl` jika berubah
-- Role dari env whitelist — tidak pernah dari request
+- User lama: sync `name`/`googleId`/`avatarUrl` jika berubah — **role tidak pernah ditimpa saat login**
+- Role tidak pernah dari request; perubahan role hanya via `POST /admin/users/:id/role` (superadmin) atau seed bootstrap
 - Return: `LoginResponse` `{ user: { id, name, email, role }, token }` + set cookie `refresh_token`
 
 ### Profil User (`GET /auth/me`)
@@ -235,8 +239,6 @@ Semua via class `Exception` di `error.ts` → `HTTPException` Hono:
 | `TELEGRAM_BOT_TOKEN` | `""` | Token bot Telegram |
 | `TELEGRAM_CHAT_ID` | `""` | Chat/group ID tujuan log |
 | `GOOGLE_CLIENT_ID` | `""` | OAuth Client ID Google — cek `aud` saat verifikasi ID token |
-| `ADMIN_EMAILS` | `[]` | Email role admin, pisahkan koma (di-lowercase saat parse) |
-| `SUPERADMIN_EMAILS` | `[]` | Email role superadmin, pisahkan koma |
 | `WIJAYAPAY_MERCHANT_ID` | `""` | Code merchant WijayaPay |
 | `WIJAYAPAY_API_KEY` | `""` | API key WijayaPay |
 | `WIJAYAPAY_BASE_URL` | `https://wijayapay.com/api` | Base URL API WijayaPay |
@@ -385,7 +387,8 @@ Di Vercel dashboard, untuk masing-masing project:
 - [x] Deploy frontend ke Vercel (via `deploy.sh` / Makefile)
 - [x] Halaman admin untuk lihat daftar store
 - [x] Registrasi user + halaman register (digantikan auto-register via Google SSO)
-- [x] Migrasi auth ke Google SSO (hapus username/password, role via env whitelist)
+- [x] Migrasi auth ke Google SSO (hapus username/password)
 - [x] Halaman profil user (referral code + list toko referral)
 - [x] Zod validation untuk semua request body (schema di `@packages/contract`)
 - [x] Route strings dipusatkan di `routes` object — tidak ada hardcoded string path
+- [x] User management: role DB-authoritative + ubah role admin ⇄ user (superadmin only), hapus whitelist env

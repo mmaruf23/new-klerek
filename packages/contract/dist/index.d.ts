@@ -137,6 +137,13 @@ declare const balanceAdjustSchema: z.ZodObject<{
     note: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 type BalanceAdjustInput = z.infer<typeof balanceAdjustSchema>;
+declare const roleUpdateSchema: z.ZodObject<{
+    role: z.ZodEnum<{
+        admin: "admin";
+        user: "user";
+    }>;
+}, z.core.$strip>;
+type RoleUpdateInput = z.infer<typeof roleUpdateSchema>;
 
 interface SubscriptionPackage {
     price: number;
@@ -148,4 +155,4 @@ interface SubscriptionPackage {
 }
 declare const dataPrice: SubscriptionPackage[];
 
-export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, googleAuthSchema, referStoreSchema, time };
+export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, googleAuthSchema, referStoreSchema, roleUpdateSchema, time };

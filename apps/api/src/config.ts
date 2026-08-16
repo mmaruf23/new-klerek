@@ -14,15 +14,7 @@ export interface Config {
   COOKIE_TOKEN_KEY: string;
   ACCESS_TOKEN_KEY: string;
   GOOGLE_CLIENT_ID: string;
-  ADMIN_EMAILS: string[];
-  SUPERADMIN_EMAILS: string[];
 }
-
-const parseEmails = (value: string | undefined) =>
-  (value ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
 
 export const config: Config = {
   NODE_ENV: process.env.NODE_ENV == "production" ? "production" : "development",
@@ -38,6 +30,4 @@ export const config: Config = {
   COOKIE_TOKEN_KEY: "store_token",
   ACCESS_TOKEN_KEY: "access_token",
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "",
-  ADMIN_EMAILS: parseEmails(process.env.ADMIN_EMAILS),
-  SUPERADMIN_EMAILS: parseEmails(process.env.SUPERADMIN_EMAILS),
 };

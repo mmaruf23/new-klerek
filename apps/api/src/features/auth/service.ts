@@ -5,7 +5,6 @@ import { users, store, balance } from "../../db/schema.js";
 import { verifyGoogleIdToken } from "../../utils/googleAuth.js";
 import { setClaims, getClaims } from "../../utils/jwt.js";
 import { sendLog } from "../../utils/telegram.js";
-import { config } from "../../config.js";
 import type { GoogleAuthInput } from "@packages/contract";
 
 const REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -27,21 +26,16 @@ const generateUniqueReferralCode = async () => {
   return referralCode!;
 };
 
-const resolveRole = (email: string): "superadmin" | "admin" | "user" => {
-  if (config.SUPERADMIN_EMAILS.includes(email)) return "superadmin";
-  if (config.ADMIN_EMAILS.includes(email)) return "admin";
-  return "user";
-};
-
 export const loginWithGoogle = async (payload: GoogleAuthInput) => {
   const profile = await verifyGoogleIdToken(payload.credential);
-  const role = resolveRole(profile.email);
 
   let user = await db.query.users.findFirst({
     where: eq(users.email, profile.email),
   });
 
   if (!user) {
+    // Role bersifat DB-authoritative: user baru selalu "user", promosi ke
+    // admin/superadmin dilakukan lewat panel superadmin atau seed bootstrap.
     const referralCode = await generateUniqueReferralCode();
     [user] = await db
       .insert(users)
@@ -50,13 +44,13 @@ export const loginWithGoogle = async (payload: GoogleAuthInput) => {
         email: profile.email,
         googleId: profile.googleId,
         avatarUrl: profile.picture,
-        role,
+        role: "user",
         refferalCode: referralCode,
       })
       .returning();
     await sendLog(`👤 User baru login via Google: ${user.name} (${user.email}) — role: ${user.role}`);
   } else if (
-    user.role !== role ||
+    // Sinkron profil dari Google, tapi role tidak pernah ditimpa saat login.
     user.name !== profile.name ||
     user.googleId !== profile.googleId ||
     user.avatarUrl !== profile.picture
@@ -64,7 +58,6 @@ export const loginWithGoogle = async (payload: GoogleAuthInput) => {
     [user] = await db
       .update(users)
       .set({
-        role,
         name: profile.name,
         googleId: profile.googleId,
         avatarUrl: profile.picture,

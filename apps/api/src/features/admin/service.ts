@@ -2,7 +2,7 @@ import { eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { users, store, balance } from "../../db/schema.js";
 import { Exception } from "../../error.js";
-import type { AdminUserItem, AdminUserDetail, BalanceAdjustInput } from "@packages/contract";
+import type { AdminUserItem, AdminUserDetail, BalanceAdjustInput, RoleUpdateInput } from "@packages/contract";
 
 interface ListUsersQuery {
   limit: number;
@@ -120,4 +120,24 @@ export const adjustUserBalance = async (userId: string, input: BalanceAdjustInpu
     .returning();
 
   return entry;
+};
+
+export const updateUserRole = async (userId: string, input: RoleUpdateInput) => {
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  if (!user) throw Exception.NotFound("User tidak ditemukan");
+
+  // Role superadmin dilindungi: hanya lewat seed bootstrap, tidak lewat panel.
+  if (user.role === "superadmin") throw Exception.Forbidden("Role superadmin tidak bisa diubah dari panel");
+
+  if (user.role === input.role) {
+    return { id: user.id, name: user.name, email: user.email, role: user.role };
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({ role: input.role, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning();
+
+  return { id: updated.id, name: updated.name, email: updated.email, role: updated.role };
 };

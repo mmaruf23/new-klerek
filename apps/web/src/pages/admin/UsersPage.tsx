@@ -1,9 +1,21 @@
 import { useState, useEffect } from "react";
 import { useLoaderData, useNavigate, useNavigation, useSearchParams } from "react-router-dom";
-import { Search, X, ChevronRight, Plus, Minus, Store, Check } from "lucide-react";
+import { Search, X, ChevronRight, Plus, Minus, Store, Check, ShieldCheck, User as UserIcon } from "lucide-react";
 import type { AdminUserItem, AdminUserDetail } from "@packages/contract";
 import type { ApiResponse } from "@packages/contract";
-import { fetchUserDetail, adjustBalance } from "@/services/adminUsersApi";
+import { fetchUserDetail, adjustBalance, updateUserRole } from "@/services/adminUsersApi";
+import { config } from "@/config";
+
+function currentViewerRole(): string | null {
+  const token = sessionStorage.getItem(config.ACCESS_TOKEN_KEY);
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const ROLE_LABEL: Record<string, string> = { user: "User", admin: "Admin", superadmin: "Superadmin" };
 const ROLE_COLOR: Record<string, string> = {
@@ -59,12 +71,33 @@ function UserDetailModal({
   const [adjust, setAdjust] = useState<AdjustState>({
     type: "credit", amount: "", note: "", submitting: false, error: null, done: false,
   });
+  const [pendingRole, setPendingRole] = useState<"admin" | "user" | null>(null);
+  const [roleSubmitting, setRoleSubmitting] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  const isSuperadminViewer = currentViewerRole() === "superadmin";
 
   useEffect(() => {
     fetchUserDetail(userId)
       .then(setDetail)
       .finally(() => setLoading(false));
   }, [userId]);
+
+  const handleRoleChange = async () => {
+    if (!detail || !pendingRole) return;
+    setRoleSubmitting(true);
+    setRoleError(null);
+    try {
+      await updateUserRole(userId, pendingRole);
+      setDetail({ ...detail, role: pendingRole });
+      setPendingRole(null);
+      onBalanceChanged();
+    } catch (err) {
+      setRoleError(err instanceof Error ? err.message : "Gagal mengubah role");
+    } finally {
+      setRoleSubmitting(false);
+    }
+  };
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +191,60 @@ function UserDetailModal({
               <p className="text-xs text-slate-400">
                 Bergabung {new Date(detail.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
               </p>
+
+              {/* Role management (superadmin only, tidak untuk target superadmin) */}
+              {isSuperadminViewer && detail.role !== "superadmin" && (
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-2">Kelola Role</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => detail.role !== "user" && setPendingRole("user")}
+                      disabled={roleSubmitting}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border-2 font-semibold text-sm transition-all disabled:opacity-60 ${detail.role === "user" ? "border-slate-300 bg-slate-100 text-slate-700" : "border-slate-100 text-slate-500 hover:border-slate-200"}`}
+                    >
+                      <UserIcon className="w-4 h-4" /> User
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => detail.role !== "admin" && setPendingRole("admin")}
+                      disabled={roleSubmitting}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border-2 font-semibold text-sm transition-all disabled:opacity-60 ${detail.role === "admin" ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-100 text-slate-500 hover:border-slate-200"}`}
+                    >
+                      <ShieldCheck className="w-4 h-4" /> Admin
+                    </button>
+                  </div>
+
+                  {roleError && <p className="text-sm text-red-500 mt-2">{roleError}</p>}
+
+                  {pendingRole && (
+                    <div className="mt-3 bg-amber-50 rounded-2xl p-3">
+                      <p className="text-xs text-amber-800 mb-2">
+                        Ubah role <span className="font-semibold">{detail.name}</span> menjadi{" "}
+                        <span className="font-semibold">{ROLE_LABEL[pendingRole]}</span>?
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { setPendingRole(null); setRoleError(null); }}
+                          disabled={roleSubmitting}
+                          className="py-2 rounded-xl bg-white text-slate-600 font-semibold text-sm border border-slate-200 disabled:opacity-60"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRoleChange}
+                          disabled={roleSubmitting}
+                          className="py-2 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 transition-colors disabled:opacity-60"
+                        >
+                          {roleSubmitting ? "Memproses..." : "Ya, ubah"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Adjust balance button */}
               <button

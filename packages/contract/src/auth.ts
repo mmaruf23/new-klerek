@@ -76,3 +76,9 @@ export const balanceAdjustSchema = z.object({
 });
 
 export type BalanceAdjustInput = z.infer<typeof balanceAdjustSchema>;
+
+export const roleUpdateSchema = z.object({
+  role: z.enum(["admin", "user"], { message: "Role harus admin atau user" }),
+});
+
+export type RoleUpdateInput = z.infer<typeof roleUpdateSchema>;

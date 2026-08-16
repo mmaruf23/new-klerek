@@ -18,6 +18,9 @@ var balanceAdjustSchema = z.object({
   amount: z.number().int().positive("Jumlah harus lebih dari 0"),
   note: z.string().max(255).optional()
 });
+var roleUpdateSchema = z.object({
+  role: z.enum(["admin", "user"], { message: "Role harus admin atau user" })
+});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -35,5 +38,6 @@ export {
   dataPrice,
   googleAuthSchema,
   referStoreSchema,
+  roleUpdateSchema,
   time
 };
