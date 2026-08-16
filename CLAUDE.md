@@ -49,6 +49,7 @@ Berisi:
 - `jwt.ts` — `JwtClaims` interface (extend `JwtPayload`)
 - `auth.ts` — Zod schemas (`googleAuthSchema`, `referStoreSchema`) + inferred types (`GoogleAuthInput`, `ReferStoreInput`) + `ProfileResponse`, `LoginResponse`, `ReferredStore`
 - `constant.ts` — konstanta `time`
+- `transaction.ts` — `transactionQuerySchema` (filter riwayat) + `TransactionListItem`, `TransactionDetail`, `TransactionItem`
 
 `JwtClaims` harus selalu diimport dari `@packages/contract`, **bukan** dari `utils/jwt.ts`.
 
@@ -89,6 +90,9 @@ Berisi:
 | GET | `/admin/users/:id` | authMiddleware + admin | Detail user + toko referral + balance |
 | POST | `/admin/users/:id/balance` | authMiddleware + admin | Sesuaikan balance user manual (credit/debit + note) |
 | POST | `/admin/users/:id/role` | authMiddleware + superadmin | Ubah role user (`admin` ⇄ `user`); tolak self & target superadmin |
+| GET | `/admin/transactions` | authMiddleware + admin | Riwayat transaksi semua toko + filter + search + pagination |
+| GET | `/transaction` | cookie `store_token` **atau** bearer | Riwayat transaksi sesuai cakupan pemanggil (kasir = tokonya, user = toko referralnya, admin = semua) |
+| GET | `/transaction/:id` | cookie `store_token` **atau** bearer | Detail transaksi lengkap (teks struk + items), dicek kepemilikan tokonya |
 
 ### Auth — Google SSO (user/admin) + Store Cookie (kasir)
 
@@ -133,6 +137,12 @@ subscription: id (auto int PK), storeId (FK→store CASCADE), createdAt, expires
 payment:      id (auto int PK), invoiceId (unique), storeId (FK→store CASCADE),
               amount (IDR), durationDays, status, qrisUrl, note, createdAt, paidAt
 balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
+transaction:  id (bigint PK), storeId (FK→store CASCADE), userId (kasir, varchar 8),
+              dateTx (date), billNo, noFaktur, cash, timeTx,
+              memberNo, memberName, memberPhone,
+              header, body, addtl, footer (text struk),
+              items (jsonb: [{sort_no, plu, qty}]), createdAt
+              UNIQUE (storeId, dateTx, noFaktur)
 ```
 
 - Store ID: 4 karakter, campuran huruf + angka
@@ -141,16 +151,26 @@ balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 - `payment.note`: keterangan bebas, bisa diisi admin untuk penambahan manual
 - Tidak ada seed user — user dibuat otomatis saat login Google (selalu role `user`). Role adalah DB-authoritative: superadmin pertama di-bootstrap via `src/db/seed.ts` (`pnpm --filter api exec tsx ./src/db/seed.ts <email>`), selanjutnya admin ⇄ user via panel superadmin
 - Kolom `refferalCode` di schema JS (dua 'f') → kolom `referal_code` di DB (satu 'r') — typo lama, jangan diperbaiki tanpa migrasi
+- Tabel `transaction` **bukan penyimpanan permanen** — retensi 3 bulan, akan dibersihkan oleh cron (belum diimplementasi). Index `transaction_date_idx` pada `date_tx` disiapkan untuk query cleanup
 
 ### Alur Upload (`POST /`)
 
 1. Terima `.zip`, ekstrak `.db` SQLite
-2. Parse nama file: `{storeID}_{YYYY-MM-DD}_{userID}.db`
+2. Parse nama file: `{storeID}_{YYYY-MM-DD}_{userID}.db` (storeID, userID, dan tanggal divalidasi)
 3. Cek cookie → jika `store_id` cocok, skip re-check subscription
 4. Jika store baru → auto-register + trial 7 hari + notifikasi Telegram
 5. Jika store ada + subscription expired → 401 + notifikasi Telegram
-6. Query SQLite, return `Summary`
-7. Set cookie JWT jika belum ada
+6. Query SQLite → `Summary`
+7. Simpan tiap faktur ke tabel `transaction` (`features/transaction/service.ts`) — best effort: kegagalan hanya di-log + kirim Telegram, upload tetap sukses
+8. Set cookie JWT jika belum ada, return `Summary`
+
+**Penyimpanan transaksi (`saveTransactions`)**
+
+- Satu baris per faktur, item disimpan sebagai `jsonb` (row count kecil — hemat Neon free tier)
+- Idempotent: `onConflictDoNothing` pada `(storeId, dateTx, noFaktur)`, jadi upload ulang file yang sama tidak menggandakan baris
+- Insert dipecah per 200 baris agar tidak melewati batas parameter Postgres
+- `dateTx` diambil dari nama file (`YYYY-MM-DD`), bukan dari kolom SQLite yang formatnya tidak dijamin
+- Nilai string dipotong sesuai panjang kolom sebelum insert
 
 ### Login Google (`POST /auth/google`)
 
@@ -190,6 +210,36 @@ balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 
 Query params: `limit` (default 20) dan `offset` (default 0).
 Response: `{ data, total, limit, offset, hasNext }`.
+
+### Riwayat Transaksi
+
+Tiga pihak membaca data yang sama dengan cakupan berbeda. Cakupan ditentukan `resolveTxScope()` di `features/transaction/guard.ts`:
+
+| Cakupan | Autentikasi | Bisa lihat |
+|---------|-------------|------------|
+| `store` | cookie `store_token` (kasir) | hanya tokonya sendiri |
+| `user` | bearer, role `user` | toko yang direferral dirinya (`store.referrerId = user.refferalCode`) |
+| `admin` | bearer, role `admin`/`superadmin` | semua toko |
+
+Bearer diprioritaskan di atas cookie. Refresh token dan token tanpa `sub` ditolak 401.
+
+**Query params** (validasi Zod `transactionQuerySchema` di `@packages/contract/src/transaction.ts`, dipakai `/transaction` dan `/admin/transactions`):
+
+| Param | Keterangan |
+|-------|------------|
+| `storeId` | filter toko (4 karakter). Di luar cakupan → 403 |
+| `userId` | filter ID kasir |
+| `date` | tanggal tunggal `YYYY-MM-DD` — kalau diisi, `from`/`to` diabaikan |
+| `from` / `to` | rentang tanggal `YYYY-MM-DD` (`from` > `to` → 400) |
+| `q` | search: `no_faktur`, `bill_no`, nama/no/telepon member, nama toko. `%` dan `_` di-escape jadi literal |
+| `sort` | `newest` (default) \| `oldest` — urut `dateTx`, `timeTx`, `id` |
+| `limit` | 1–100, default 20 |
+| `offset` | default 0 |
+
+Param bernilai string kosong (`?q=`) diabaikan, bukan error.
+
+- **List** (`/transaction`, `/admin/transactions`) tidak membawa payload berat: `items`, `header`, `body`, `addtl`, `footer` tidak diselect. Sebagai gantinya ada `itemCount` (`jsonb_array_length`) + `storeName` dari join ke `store`
+- **Detail** (`/transaction/:id`) membawa semuanya termasuk teks struk dan `items`. ID non-numerik → 400, tidak ditemukan → 404, bukan toko yang berhak → 403
 
 ### Subscription & Pricing
 
@@ -392,3 +442,7 @@ Di Vercel dashboard, untuk masing-masing project:
 - [x] Zod validation untuk semua request body (schema di `@packages/contract`)
 - [x] Route strings dipusatkan di `routes` object — tidak ada hardcoded string path
 - [x] User management: role DB-authoritative + ubah role admin ⇄ user (superadmin only), hapus whitelist env
+- [x] Simpan data tiap transaksi ke tabel `transaction` saat upload
+- [ ] Cron cleanup transaksi > 3 bulan (Vercel Cron + route terproteksi `CRON_SECRET`)
+- [x] Endpoint baca riwayat transaksi (`/transaction`, `/transaction/:id`, `/admin/transactions`)
+- [ ] Halaman frontend untuk riwayat transaksi

@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { initAndValidateDB, prepareDbBuffer, processDB } from "./service.js";
 import { addNewStore, getStoreByIDWithLatestSubs } from "../store/service.js";
 import { startTrial } from "../subscription/service.js";
+import { saveTransactions } from "../transaction/service.js";
 import { cookieMiddleware } from "../auth/middleware.js";
 import { setClaims } from "../../utils/jwt.js";
 import type { JwtClaims } from "@packages/contract";
@@ -27,7 +28,7 @@ export const clerekHandler = new Hono()
   // UPLOAD
   .post("/", cookieMiddleware, async (c) => {
     const form = await c.req.parseBody();
-    const { buffer, userID, dateFx, storeID } = await prepareDbBuffer(form.file);
+    const { buffer, userID, dateFx, dateTX, storeID } = await prepareDbBuffer(form.file);
 
     let store: StoreWithSubs | undefined;
 
@@ -65,6 +66,20 @@ export const clerekHandler = new Hono()
       });
       await startTrial(data.store_id);
       await sendLog(`🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`);
+    }
+
+    // SIMPAN TRANSAKSI (retensi 3 bulan) — best effort, jangan gagalkan upload
+    try {
+      await saveTransactions({
+        storeId: storeID,
+        userId: userID,
+        dateTx: dateTX,
+        data: data.data,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error("failed saving transactions:", msg);
+      await sendLog(`🔴 GAGAL SIMPAN TRANSAKSI\nToko: ${storeID}\nTanggal: ${dateTX}\n${msg}`);
     }
 
     // CASE DEVICE BARU

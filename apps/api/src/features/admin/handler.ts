@@ -1,8 +1,16 @@
 import { Hono } from "hono";
-import type { ApiResponse, AdminUserItem, AdminUserDetail, JwtClaims } from "@packages/contract";
+import type {
+  ApiResponse,
+  AdminUserItem,
+  AdminUserDetail,
+  JwtClaims,
+  TransactionListItem,
+} from "@packages/contract";
 import { balanceAdjustSchema, roleUpdateSchema } from "@packages/contract";
 import { authMiddleware } from "../auth/middleware.js";
 import { listUsers, getUserDetail, adjustUserBalance, updateUserRole } from "./service.js";
+import { listTransactions } from "../transaction/service.js";
+import { parseTransactionQuery } from "../transaction/guard.js";
 import { Exception } from "../../error.js";
 
 const adminGuard = authMiddleware;
@@ -37,6 +45,17 @@ export const adminHandler = new Hono()
     const data = await getUserDetail(id);
 
     return c.json<ApiResponse<AdminUserDetail>>({ success: true, data });
+  })
+
+  // GET /admin/transactions — riwayat transaksi semua toko
+  // Filter: storeId, userId, date | from+to, q, sort, limit, offset
+  .get("/transactions", adminGuard, async (c) => {
+    const payload = c.get("jwtPayload") as JwtClaims;
+    await requireAdmin(payload.role);
+
+    const { data, ...page } = await listTransactions(parseTransactionQuery(c));
+
+    return c.json<ApiResponse<TransactionListItem[]>>({ success: true, data, page });
   })
 
   .post("/users/:id/balance", adminGuard, async (c) => {

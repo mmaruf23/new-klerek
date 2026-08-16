@@ -91,3 +91,9 @@ export const mapToResponseObject = (rows: Row[]): Summary => {
 export const isValidUserID = (s: string) => {
   return /^(?=[0-9]).{8}$/.test(s);
 };
+
+// nama file memakai format tanggal YYYY-MM-DD
+export const isValidDateTX = (s: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  return !Number.isNaN(Date.parse(s));
+};

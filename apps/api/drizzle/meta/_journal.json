@@ -36,6 +36,13 @@
       "when": 1783242221924,
       "tag": "0004_chemical_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786857356542,
+      "tag": "0005_red_gateway",
+      "breakpoints": true
     }
   ]
 }
