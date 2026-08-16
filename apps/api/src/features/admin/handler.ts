@@ -1,14 +1,18 @@
 import { Hono } from "hono";
 import type { ApiResponse, AdminUserItem, AdminUserDetail, JwtClaims } from "@packages/contract";
-import { balanceAdjustSchema } from "@packages/contract";
+import { balanceAdjustSchema, roleUpdateSchema } from "@packages/contract";
 import { authMiddleware } from "../auth/middleware.js";
-import { listUsers, getUserDetail, adjustUserBalance } from "./service.js";
+import { listUsers, getUserDetail, adjustUserBalance, updateUserRole } from "./service.js";
 import { Exception } from "../../error.js";
 
 const adminGuard = authMiddleware;
 
 const requireAdmin = async (role: string | undefined) => {
   if (role !== "admin" && role !== "superadmin") throw Exception.Forbidden("Akses ditolak");
+};
+
+const requireSuperadmin = async (role: string | undefined) => {
+  if (role !== "superadmin") throw Exception.Forbidden("Hanya superadmin yang bisa mengubah role");
 };
 
 export const adminHandler = new Hono()
@@ -48,4 +52,21 @@ export const adminHandler = new Hono()
 
     const entry = await adjustUserBalance(id, result.data);
     return c.json<ApiResponse<typeof entry>>({ success: true, data: entry }, 201);
+  })
+
+  .post("/users/:id/role", adminGuard, async (c) => {
+    const payload = c.get("jwtPayload") as JwtClaims;
+    await requireSuperadmin(payload.role);
+
+    const id = c.req.param("id");
+    if (id === payload.sub) throw Exception.BadRequest("Tidak bisa mengubah role sendiri");
+
+    const body = await c.req.json().catch(() => null);
+    const result = roleUpdateSchema.safeParse(body);
+    if (!result.success) {
+      return c.json<ApiResponse>({ success: false, message: result.error.issues[0].message }, 400);
+    }
+
+    const updated = await updateUserRole(id, result.data);
+    return c.json<ApiResponse<typeof updated>>({ success: true, data: updated });
   });

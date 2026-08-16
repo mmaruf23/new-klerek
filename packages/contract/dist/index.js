@@ -24,6 +24,7 @@ __export(index_exports, {
   dataPrice: () => dataPrice,
   googleAuthSchema: () => googleAuthSchema,
   referStoreSchema: () => referStoreSchema,
+  roleUpdateSchema: () => roleUpdateSchema,
   time: () => time
 });
 module.exports = __toCommonJS(index_exports);
@@ -48,6 +49,9 @@ var balanceAdjustSchema = import_zod.z.object({
   amount: import_zod.z.number().int().positive("Jumlah harus lebih dari 0"),
   note: import_zod.z.string().max(255).optional()
 });
+var roleUpdateSchema = import_zod.z.object({
+  role: import_zod.z.enum(["admin", "user"], { message: "Role harus admin atau user" })
+});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -66,5 +70,6 @@ var dataPrice = [
   dataPrice,
   googleAuthSchema,
   referStoreSchema,
+  roleUpdateSchema,
   time
 });

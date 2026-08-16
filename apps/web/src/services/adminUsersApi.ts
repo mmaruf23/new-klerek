@@ -28,6 +28,19 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail> 
   return json.data;
 }
 
+export async function updateUserRole(
+  userId: string,
+  role: "admin" | "user",
+): Promise<void> {
+  const res = await fetchWithAuth(`/admin/users/${userId}/role`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+  const json: ApiResponse = await res.json();
+  if (!json.success) throw new Error(json.message ?? "Gagal mengubah role");
+}
+
 export async function adjustBalance(
   userId: string,
   type: "credit" | "debit",
