@@ -7,11 +7,7 @@ import {
   uuid,
   pgEnum,
   boolean,
-  bigint,
   date,
-  text,
-  jsonb,
-  index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -76,56 +72,34 @@ export const balance = pgTable("balance", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Item transaksi disimpan sebagai jsonb — bentuknya sama dengan `Item` di @packages/contract.
-// Sengaja dideklarasi lokal supaya drizzle-kit tidak perlu build @packages/contract dulu.
-type TransactionItem = {
-  sort_no: number;
-  plu: number;
-  qty: number;
-};
-
-// Data transaksi hasil upload. TIDAK permanen — dibersihkan berkala (retensi 3 bulan).
-export const transaction = pgTable(
-  "transaction",
+// Rekap harian hasil upload — satu baris per (toko, kasir, tanggal). Upload ulang = upsert.
+export const dailySummary = pgTable(
+  "daily_summary",
   {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     storeId: varchar("store_id", { length: 4 })
       .notNull()
       .references(() => store.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 8 }).notNull(),
     dateTx: date("date_tx").notNull(),
-    billNo: varchar("bill_no", { length: 8 }).notNull(),
-    noFaktur: varchar("no_faktur", { length: 32 }).notNull(),
-    cash: integer("cash").notNull(),
-    timeTx: varchar("time_tx", { length: 16 }),
-    memberNo: varchar("member_no", { length: 32 }),
-    memberName: varchar("member_name", { length: 255 }),
-    memberPhone: varchar("member_phone", { length: 32 }),
-    header: text("header"),
-    body: text("body"),
-    addtl: text("addtl"),
-    footer: text("footer"),
-    items: jsonb("items").$type<TransactionItem[]>().notNull(),
+    totalFaktur: integer("total_faktur").notNull(),
+    memberFaktur: integer("member_faktur").notNull().default(0),
+    totalCash: integer("total_cash").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [
-    // idempotent: upload ulang file yang sama tidak menggandakan baris
-    uniqueIndex("transaction_store_date_faktur_uq").on(t.storeId, t.dateTx, t.noFaktur),
-    index("transaction_store_date_idx").on(t.storeId, t.dateTx),
-    // dipakai cron cleanup retensi 3 bulan
-    index("transaction_date_idx").on(t.dateTx),
-  ],
+  (t) => [uniqueIndex("daily_summary_store_date_user_uq").on(t.storeId, t.dateTx, t.userId)],
 );
 
 export const storeRelations = relations(store, ({ many }) => ({
   subs: many(subscription),
   payments: many(payment),
-  transactions: many(transaction),
+  dailySummaries: many(dailySummary),
 }));
 
-export const transactionRelations = relations(transaction, ({ one }) => ({
+export const dailySummaryRelations = relations(dailySummary, ({ one }) => ({
   store: one(store, {
-    fields: [transaction.storeId],
+    fields: [dailySummary.storeId],
     references: [store.id],
   }),
 }));
@@ -170,5 +144,5 @@ export type SubscriptionInsert = InferInsertModel<typeof subscription>;
 export type Payment = InferSelectModel<typeof payment>;
 export type PaymentInsert = InferInsertModel<typeof payment>;
 
-export type Transaction = InferSelectModel<typeof transaction>;
-export type TransactionInsert = InferInsertModel<typeof transaction>;
+export type DailySummary = InferSelectModel<typeof dailySummary>;
+export type DailySummaryInsert = InferInsertModel<typeof dailySummary>;

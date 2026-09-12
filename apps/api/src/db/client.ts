@@ -15,8 +15,8 @@ import {
   users,
   balance,
   balanceRelations,
-  transaction,
-  transactionRelations,
+  dailySummary,
+  dailySummaryRelations,
 } from "./schema.js";
 
 const isProd = config.NODE_ENV === "production";
@@ -27,12 +27,12 @@ const schema = {
   payment,
   users,
   balance,
-  transaction,
+  dailySummary,
   storeRelations,
   subsRelations,
   paymentRelations,
   balanceRelations,
-  transactionRelations,
+  dailySummaryRelations,
 };
 
 export const db = isProd

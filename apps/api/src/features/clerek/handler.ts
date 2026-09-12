@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { initAndValidateDB, prepareDbBuffer, processDB } from "./service.js";
 import { addNewStore, getStoreByIDWithLatestSubs } from "../store/service.js";
 import { startTrial } from "../subscription/service.js";
-import { saveTransactions } from "../transaction/service.js";
+import { saveDailySummary } from "../summary/service.js";
 import { cookieMiddleware } from "../auth/middleware.js";
 import { setClaims } from "../../utils/jwt.js";
 import type { JwtClaims } from "@packages/contract";
@@ -68,18 +68,13 @@ export const clerekHandler = new Hono()
       await sendLog(`🏪 TOKO BARU\nID: ${data.store_id}\nNama: ${data.store_name}`);
     }
 
-    // SIMPAN TRANSAKSI (retensi 3 bulan) — best effort, jangan gagalkan upload
+    // SIMPAN REKAP HARIAN — best effort, jangan gagalkan upload
     try {
-      await saveTransactions({
-        storeId: storeID,
-        userId: userID,
-        dateTx: dateTX,
-        data: data.data,
-      });
+      await saveDailySummary({ storeId: storeID, userId: userID, dateTx: dateTX, summary: data });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error("failed saving transactions:", msg);
-      await sendLog(`🔴 GAGAL SIMPAN TRANSAKSI\nToko: ${storeID}\nTanggal: ${dateTX}\n${msg}`);
+      console.error("failed saving daily summary:", msg);
+      await sendLog(`🔴 GAGAL SIMPAN REKAP HARIAN\nToko: ${storeID}\nTanggal: ${dateTX}\n${msg}`);
     }
 
     // CASE DEVICE BARU
