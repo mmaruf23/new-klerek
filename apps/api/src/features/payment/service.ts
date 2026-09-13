@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { payment, subscription, store, users, balance, type PaymentInsert } from '../../db/schema.js';
 
@@ -27,8 +27,22 @@ export const getPaymentsByStoreId = async (storeId: string) => {
 export const isPaymentExpired = (p: { status: string; createdAt: Date }) =>
   p.status === 'pending' && Date.now() - p.createdAt.getTime() > PAYMENT_TTL_MS;
 
-// Dipanggil saat cek status ke Saweria mengembalikan SUCCESS.
-// Update payment ke paid, lalu extend subscription store. Idempoten — hanya proses payment yang masih pending.
+// Payment pending yang masih berlaku untuk (store, nominal) — dipakai ulang agar
+// refresh halaman / spam request tidak membuat donasi baru di Saweria.
+export const findReusablePendingPayment = async (storeId: string, amount: number) => {
+  return db.query.payment.findFirst({
+    where: and(
+      eq(payment.storeId, storeId),
+      eq(payment.amount, amount),
+      eq(payment.status, 'pending'),
+      gt(payment.createdAt, new Date(Date.now() - PAYMENT_TTL_MS)),
+    ),
+    orderBy: (p, { desc }) => [desc(p.createdAt)],
+  });
+};
+
+// Dipanggil dari webhook Saweria. Update payment ke paid, lalu extend subscription store.
+// Idempoten — hanya proses payment yang masih pending (webhook bisa terkirim lebih dari sekali).
 export const fulfillPayment = async (invoiceId: string, paidAt: Date) => {
   const p = await getPaymentByInvoiceId(invoiceId);
   if (!p || p.status !== 'pending') return null;

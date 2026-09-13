@@ -9,6 +9,7 @@ export interface Config {
   CORS_ORIGIN: string;
   SAWERIA_BASE_URL: string;
   SAWERIA_USER_ID: string;
+  SAWERIA_WEBHOOK_TOKEN: string;
   COOKIE_TOKEN_KEY: string;
   ACCESS_TOKEN_KEY: string;
   GOOGLE_CLIENT_ID: string;
@@ -23,6 +24,7 @@ export const config: Config = {
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
   SAWERIA_BASE_URL: process.env.SAWERIA_BASE_URL ?? "https://backend.saweria.co",
   SAWERIA_USER_ID: process.env.SAWERIA_USER_ID ?? "",
+  SAWERIA_WEBHOOK_TOKEN: process.env.SAWERIA_WEBHOOK_TOKEN ?? "",
   COOKIE_TOKEN_KEY: "store_token",
   ACCESS_TOKEN_KEY: "access_token",
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "",

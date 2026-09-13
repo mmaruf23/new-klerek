@@ -156,8 +156,9 @@ interface SubscriptionPackage {
 declare const dataPrice: SubscriptionPackage[];
 
 declare const generatePaymentSchema: z.ZodObject<{
+    storeId: z.ZodString;
     packageIndex: z.ZodNumber;
-    email: z.ZodString;
+    email: z.ZodEmail;
 }, z.core.$strip>;
 type GeneratePaymentInput = z.infer<typeof generatePaymentSchema>;
 type PaymentStatus = "pending" | "paid" | "failed" | "expired";

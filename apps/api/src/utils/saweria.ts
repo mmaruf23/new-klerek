@@ -1,33 +1,43 @@
 import { config } from "../config.js";
 
 // Endpoint internal Saweria (tidak terdokumentasi resmi) — hasil eksplorasi manual.
-// Create:  POST {BASE}/donations/snap/{userId}         → { data: { id, qr_string, status: "PENDING", ... } }
-// Status:  GET  {BASE}/donations/qris/snap/{donationId} → { data: { transaction_status: "PENDING" | "SUCCESS", ... } }
-
-export type SaweriaStatus = "PENDING" | "SUCCESS";
+// Create: POST {BASE}/donations/snap/{userId} → { data: { id, qr_string, status: "PENDING", ... } }
+// Konfirmasi pembayaran datang lewat webhook (lihat SaweriaWebhookPayload), bukan polling.
 
 export interface SaweriaDonation {
   id: string;
   qrString: string;
   amount: number;
-  status: SaweriaStatus;
 }
 
 interface CreateDonationParams {
   amount: number;
-  message: string; // dipakai sebagai invoiceId agar terlacak di dashboard Saweria
+  message: string; // dipakai sebagai catatan agar terlacak di dashboard Saweria
   donatorName: string;
   donatorEmail: string; // diinput kasir di frontend, wajib oleh Saweria
 }
 
-const jsonHeaders = { "Content-Type": "application/json" };
+// Body yang dikirim Saweria ke webhook URL setiap ada donasi masuk.
+// `id` = donation id = payment.invoiceId di DB kita.
+export interface SaweriaWebhookPayload {
+  version: string;
+  created_at: string;
+  id: string;
+  type: "donation";
+  amount_raw: number;
+  cut: number;
+  donator_name: string;
+  donator_email: string;
+  donator_is_user: boolean;
+  message?: string;
+}
 
 export const createDonation = async (params: CreateDonationParams): Promise<SaweriaDonation> => {
   if (!config.SAWERIA_USER_ID) throw new Error("SAWERIA_USER_ID belum diisi");
 
   const res = await fetch(`${config.SAWERIA_BASE_URL}/donations/snap/${config.SAWERIA_USER_ID}`, {
     method: "POST",
-    headers: jsonHeaders,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       agree: true,
       notUnderage: true,
@@ -56,20 +66,10 @@ export const createDonation = async (params: CreateDonationParams): Promise<Sawe
     id: data.id,
     qrString: data.qr_string,
     amount: data.amount_raw,
-    status: data.status,
   };
 };
 
-export const checkDonationStatus = async (donationId: string): Promise<SaweriaStatus> => {
-  const res = await fetch(`${config.SAWERIA_BASE_URL}/donations/qris/snap/${donationId}`, {
-    headers: jsonHeaders,
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Saweria error ${res.status}: ${err}`);
-  }
-
-  const { data } = await res.json();
-  return data?.transaction_status === "SUCCESS" ? "SUCCESS" : "PENDING";
-};
+// Webhook Saweria tidak punya signature — diamankan dengan shared secret di query string (?token=...)
+// yang diset pada URL webhook di dashboard Saweria.
+export const verifyWebhookToken = (token: string | undefined): boolean =>
+  !!config.SAWERIA_WEBHOOK_TOKEN && token === config.SAWERIA_WEBHOOK_TOKEN;

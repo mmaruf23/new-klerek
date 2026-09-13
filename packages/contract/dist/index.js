@@ -69,8 +69,9 @@ var dataPrice = [
 // src/payment.ts
 var import_zod2 = require("zod");
 var generatePaymentSchema = import_zod2.z.object({
+  storeId: import_zod2.z.string().length(4, "ID toko harus 4 karakter").regex(/^[A-Z0-9]+$/, "ID toko hanya huruf kapital dan angka"),
   packageIndex: import_zod2.z.number({ message: "packageIndex harus angka" }).int().min(0, "Paket tidak valid").max(dataPrice.length - 1, "Paket tidak valid"),
-  email: import_zod2.z.string().email("Email tidak valid").max(100, "Email terlalu panjang")
+  email: import_zod2.z.email("Email tidak valid").max(100, "Email terlalu panjang")
 });
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

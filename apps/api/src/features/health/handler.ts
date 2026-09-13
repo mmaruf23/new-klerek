@@ -9,7 +9,7 @@ export const healthHandler = new Hono()
   .get("/", (c) => {
     return c.json<ApiResponse>({ success: true, message: "OK" });
   })
-  .get("/db", superAdminMiddleware, async (c) => {
+  .get("/db", async (c) => {
     const ok = await checkDB();
     if (!ok) return c.json<ApiResponse>({ success: false, message: "DB IS NOT OK" }, 503);
 

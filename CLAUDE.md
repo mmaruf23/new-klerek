@@ -86,9 +86,10 @@ Berisi:
 | GET | `/health/db` | — | DB health check (jalankan SELECT 1) |
 | GET | `/health/telegram` | — | Kirim ping ke Telegram, cek konfigurasi bot |
 | GET | `/health/config` | authMiddleware | Lihat config aktif (env vars) |
-| POST | `/payment/generate` | cookie | Buat donasi QRIS di Saweria (body: `packageIndex`, `email`) |
-| GET | `/payment` | cookie | List semua payment milik store |
-| GET | `/payment/:invoiceId` | cookie | Cek status payment — poll aktif ke Saweria; jika SUCCESS: buat subscription + kredit balance referrer 50% |
+| POST | `/payment/generate` | — | Buat donasi QRIS di Saweria (body: `storeId`, `packageIndex`, `email`); reuse QR pending yang masih berlaku |
+| GET | `/payment` | cookie | List semua payment milik store (belum dipakai FE) |
+| GET | `/payment/:invoiceId` | — | Cek status payment dari DB (tandai `expired` jika > 15 menit) |
+| POST | `/payment/webhook` | query `token` | Webhook Saweria: cocokkan `id` → `fulfillPayment` (subscription + kredit balance referrer 50%) |
 | GET | `/admin/users` | authMiddleware + admin | List user + pagination + search `q` (nama/email) |
 | GET | `/admin/users/:id` | authMiddleware + admin | Detail user + toko referral + balance |
 | POST | `/admin/users/:id/balance` | authMiddleware + admin | Sesuaikan balance user manual (credit/debit + note) |
@@ -197,23 +198,30 @@ Hati-hati saat impor ulang: `subscription` tidak punya unique key, jadi menjalan
 
 ### Payment Flow (Saweria)
 
-Menggunakan endpoint internal `backend.saweria.co` (tidak terdokumentasi resmi, hasil eksplorasi manual). Tidak ada webhook — status di-poll.
+Create donasi memakai endpoint internal `backend.saweria.co` (tidak terdokumentasi resmi, hasil eksplorasi manual). Konfirmasi pembayaran lewat **webhook** Saweria — tidak ada polling ke Saweria (hemat limit Vercel).
+
+Endpoint payment **public** — tidak pakai cookie `store_token`. Alasan: cookie hanya di-set saat upload sukses, sedangkan toko expired ditolak sebelum itu → tidak pernah bisa bayar. Siapa pun boleh membayar untuk toko mana pun (hanya memberi subscription, tidak ada keuntungan bagi penyerang).
 
 **Generate QRIS (`POST /payment/generate`):**
-1. Kasir isi email + pilih paket (`packageIndex` dari `subscription/data.ts`), validasi `generatePaymentSchema`
-2. Panggil Saweria `POST /donations/snap/{SAWERIA_USER_ID}` dengan `amount`, `payment_type: "qris"`, `message = klerek-{storeId}-{timestamp}`, `customer_info.email` dari kasir
-3. Simpan record `payment` status `pending`: `invoiceId` = `data.id` Saweria, `qrString` = `data.qr_string`, `note` = message
-4. Return data payment — frontend render QR dari `qrString` dengan `qrcode.react`
+1. Body `{ storeId, packageIndex, email }`, validasi `generatePaymentSchema`; toko harus ada (404)
+2. Jika ada payment `pending` belum expired untuk `(storeId, amount)` → kembalikan yang itu (anti-spam, refresh tidak bikin QR baru)
+3. Panggil Saweria `POST /donations/snap/{SAWERIA_USER_ID}` dengan `amount`, `payment_type: "qris"`, `message = klerek-{storeId}-{timestamp}`, `customer_info.email` dari kasir
+4. Simpan record `payment` status `pending`: `invoiceId` = `data.id` Saweria, `qrString` = `data.qr_string`, `note` = message
+5. Frontend render QR dari `qrString` dengan `qrcode.react`, lalu polling `GET /payment/:invoiceId` tiap 5 detik
 
-**Cek status (`GET /payment/:invoiceId`):**
-1. Jika payment masih `pending` → panggil Saweria `GET /donations/qris/snap/{id}`
-2. `transaction_status: "SUCCESS"` → `fulfillPayment`: update `paid` + buat subscription (extend dari expiry aktif) + kredit balance referrer 50% (idempoten, hanya untuk payment `pending`)
-3. Masih `PENDING` tapi umur > `PAYMENT_TTL_MS` (15 menit, sama dengan countdown frontend) → tandai `expired`
-4. Gagal hubungi Saweria → status tidak diubah, frontend retry
+**Webhook (`POST /payment/webhook?token=...`):**
+1. Verifikasi `token` query = `SAWERIA_WEBHOOK_TOKEN` (shared secret; URL webhook di dashboard Saweria diisi lengkap dengan `?token=`). Tidak valid → 401 + log Telegram
+2. Cari payment by `body.id` (= donation id). Tidak ada → donasi langsung dari halaman Saweria, abaikan + log ℹ️
+3. `amount_raw < payment.amount` → abaikan + log ⚠️
+4. `fulfillPayment`: update `paid` + buat subscription (extend dari expiry aktif) + kredit balance referrer 50%. Idempoten — hanya payment `pending`, jadi webhook ganda aman
+5. Selalu balas 200 untuk kasus yang diabaikan agar Saweria tidak retry
+
+**Cek status (`GET /payment/:invoiceId`):** baca DB saja; `pending` berumur > `PAYMENT_TTL_MS` (15 menit, sama dengan countdown frontend) → tandai `expired`.
 
 **Saweria utility** di `src/utils/saweria.ts`:
-- `createDonation({ amount, message, donatorName, donatorEmail })` — return `{ id, qrString, amount, status }`
-- `checkDonationStatus(donationId)` — return `"PENDING" | "SUCCESS"`
+- `createDonation({ amount, message, donatorName, donatorEmail })` — return `{ id, qrString, amount }`
+- `verifyWebhookToken(token)` — bandingkan dengan `SAWERIA_WEBHOOK_TOKEN`
+- `SaweriaWebhookPayload` — tipe body webhook (`id`, `amount_raw`, `donator_name`, `donator_email`, `message`, …)
 
 ### Pagination (`GET /store`)
 
@@ -224,7 +232,7 @@ Response: `{ data, total, limit, offset, hasNext }`.
 
 - Trial: 7 hari otomatis saat pertama upload
 - Paket berbayar: 1K–100K IDR (lihat `subscription/data.ts`)
-- Payment gateway: **Saweria** (endpoint internal, polling tanpa webhook)
+- Payment gateway: **Saweria** (create via endpoint internal, konfirmasi via webhook)
 - Expired → 401 EXPIRED ACCESS
 
 ### Logging (Telegram Bot)
@@ -241,6 +249,7 @@ Event yang dikirim ke Telegram:
 - 👤 User baru login via Google
 - ⚠️ Subscription expired saat upload
 - ✅ Pembayaran berhasil
+- 🔴 Webhook Saweria token tidak valid / ℹ️ donasi tanpa payment / ⚠️ nominal kurang
 
 Env vars: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` — no-op jika tidak diisi.
 
@@ -269,6 +278,7 @@ Semua via class `Exception` di `error.ts` → `HTTPException` Hono:
 | `GOOGLE_CLIENT_ID` | `""` | OAuth Client ID Google — cek `aud` saat verifikasi ID token |
 | `SAWERIA_BASE_URL` | `https://backend.saweria.co` | Base URL endpoint internal Saweria |
 | `SAWERIA_USER_ID` | `""` | User ID akun Saweria penerima donasi (nilai tetap) |
+| `SAWERIA_WEBHOOK_TOKEN` | `""` | Shared secret webhook — URL webhook di Saweria: `https://api.klerek.my.id/payment/webhook?token=<nilai>` |
 
 Lihat `apps/api/.example.env` untuk template lengkap.
 
@@ -421,7 +431,7 @@ Target environment default `production`; ganti dengan `VERCEL_ENV=preview ./env.
 
 - [x] Refresh token — JWT expire 10 menit, belum ada mekanisme refresh
 - [x] Halaman frontend untuk payment flow (generate QRIS, tampilkan QR, cek status)
-- [x] Implementasi payment flow (Saweria — generate QRIS, polling status, auto-extend subscription)
+- [x] Implementasi payment flow (Saweria — generate QRIS, webhook, auto-extend subscription)
 - [x] Deploy frontend ke Vercel (via `deploy.sh` / Makefile)
 - [x] Halaman admin untuk lihat daftar store
 - [x] Registrasi user + halaman register (digantikan auto-register via Google SSO)

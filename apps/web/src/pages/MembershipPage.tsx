@@ -48,13 +48,17 @@ function projectedRange(totalDays: number) {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-function getStoreName(): string {
+type StoreRef = { id: string; name: string };
+
+// Default toko diambil dari summary upload terakhir (jika ada)
+function getStoreFromSession(): StoreRef | null {
   try {
     const raw = sessionStorage.getItem('klerek_summary');
-    if (!raw) return '';
-    return (JSON.parse(raw) as Summary).store_name ?? '';
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Summary;
+    return s.store_id ? { id: s.store_id, name: s.store_name ?? s.store_id } : null;
   } catch {
-    return '';
+    return null;
   }
 }
 
@@ -308,7 +312,7 @@ export default function MembershipPage() {
   const [error, setError] = useState<string | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [pollStatus, setPollStatus] = useState<PollStatus | null>(null);
-  const [resolvedStoreName, setResolvedStoreName] = useState(getStoreName);
+  const [resolvedStore, setResolvedStore] = useState<StoreRef | null>(getStoreFromSession);
   const [storeInput, setStoreInput] = useState('');
   const [storeInputLoading, setStoreInputLoading] = useState(false);
   const [storeInputError, setStoreInputError] = useState('');
@@ -347,6 +351,11 @@ export default function MembershipPage() {
   };
 
   const handlePilih = async (idx: number) => {
+    if (!resolvedStore) {
+      setError('Masukkan ID toko terlebih dahulu.');
+      setSelectedPkg(idx);
+      return;
+    }
     const trimmedEmail = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setEmailError('Masukkan email yang valid');
@@ -356,18 +365,14 @@ export default function MembershipPage() {
     setLoading(idx);
     setError(null);
     try {
-      const result = await generateQris({ packageIndex: idx, email: trimmedEmail });
+      const result = await generateQris({ storeId: resolvedStore.id, packageIndex: idx, email: trimmedEmail });
       setPayment(result);
       setSelectedPkg(idx);
       setPollStatus('polling');
       setView('qris');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
-      setError(
-        msg.toLowerCase().includes('unauthorized') || msg.includes('401')
-          ? 'Upload file terlebih dahulu untuk mengaktifkan toko.'
-          : msg,
-      );
+      setError(msg);
     } finally {
       setLoading(null);
     }
@@ -381,7 +386,7 @@ export default function MembershipPage() {
     setStoreInputError('');
     try {
       const data = await fetchStorePublic(id);
-      setResolvedStoreName(data.name);
+      setResolvedStore(data);
       setStoreInput('');
     } catch (err) {
       setStoreInputError(err instanceof Error ? err.message : 'Toko tidak ditemukan');
@@ -421,7 +426,7 @@ export default function MembershipPage() {
       <QrisView
         payment={payment}
         pkgIdx={selectedPkg}
-        storeName={resolvedStoreName}
+        storeName={resolvedStore?.name ?? ''}
         pollStatus={pollStatus}
         onBack={handleBack}
         onCheckNow={handleCheckNow}
@@ -446,10 +451,10 @@ export default function MembershipPage() {
       {/* ── Mobile heading + subtitle ── */}
       <div className="md:hidden px-5 mb-5">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Bayar sesuai pakai.</h1>
-        {resolvedStoreName ? (
+        {resolvedStore ? (
           <p className="text-slate-500 text-sm">
             Aktifkan untuk toko{' '}
-            <span className="font-semibold text-slate-800">{resolvedStoreName}</span>.{' '}
+            <span className="font-semibold text-slate-800">{resolvedStore.name}</span>.{' '}
             Tanpa langganan otomatis.
           </p>
         ) : (
@@ -458,7 +463,7 @@ export default function MembershipPage() {
       </div>
 
       {/* ── Mobile store input ── */}
-      {!resolvedStoreName && (
+      {!resolvedStore && (
         <div className="md:hidden px-5 mb-5">
           <form onSubmit={handleLookupStore} className="flex gap-2">
             <input
@@ -485,12 +490,12 @@ export default function MembershipPage() {
 
       {/* ── Desktop: store badge / input ── */}
       <div className="hidden md:flex justify-center mb-4">
-        {resolvedStoreName ? (
+        {resolvedStore ? (
           <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full">
             <span>▶</span>
-            <span>Untuk: {resolvedStoreName}</span>
+            <span>Untuk: {resolvedStore.name}</span>
             <button
-              onClick={() => setResolvedStoreName('')}
+              onClick={() => setResolvedStore(null)}
               className="ml-1 text-indigo-400 hover:text-indigo-600 leading-none"
               title="Ganti toko"
             >

@@ -37,8 +37,9 @@ var dataPrice = [
 // src/payment.ts
 import { z as z2 } from "zod";
 var generatePaymentSchema = z2.object({
+  storeId: z2.string().length(4, "ID toko harus 4 karakter").regex(/^[A-Z0-9]+$/, "ID toko hanya huruf kapital dan angka"),
   packageIndex: z2.number({ message: "packageIndex harus angka" }).int().min(0, "Paket tidak valid").max(dataPrice.length - 1, "Paket tidak valid"),
-  email: z2.string().email("Email tidak valid").max(100, "Email terlalu panjang")
+  email: z2.email("Email tidak valid").max(100, "Email terlalu panjang")
 });
 export {
   balanceAdjustSchema,
