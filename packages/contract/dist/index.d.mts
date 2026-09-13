@@ -155,4 +155,23 @@ interface SubscriptionPackage {
 }
 declare const dataPrice: SubscriptionPackage[];
 
-export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GoogleAuthInput, type JwtClaims, type LoginResponse, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, googleAuthSchema, referStoreSchema, roleUpdateSchema, time };
+declare const generatePaymentSchema: z.ZodObject<{
+    packageIndex: z.ZodNumber;
+    email: z.ZodString;
+}, z.core.$strip>;
+type GeneratePaymentInput = z.infer<typeof generatePaymentSchema>;
+type PaymentStatus = "pending" | "paid" | "failed" | "expired";
+interface PaymentResponse {
+    id: number;
+    invoiceId: string;
+    storeId: string;
+    amount: number;
+    durationDays: number;
+    status: PaymentStatus;
+    qrString: string | null;
+    note: string | null;
+    createdAt: string;
+    paidAt: string | null;
+}
+
+export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GeneratePaymentInput, type GoogleAuthInput, type JwtClaims, type LoginResponse, type PaymentResponse, type PaymentStatus, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, generatePaymentSchema, googleAuthSchema, referStoreSchema, roleUpdateSchema, time };

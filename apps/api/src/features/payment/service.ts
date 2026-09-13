@@ -2,17 +2,12 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { payment, subscription, store, users, balance, type PaymentInsert } from '../../db/schema.js';
 
+// Saweria tidak mengirim expiry QR — payment pending lebih lama dari ini dianggap expired.
+// Disamakan dengan countdown di frontend (QRIS_SECS).
+export const PAYMENT_TTL_MS = 15 * 60 * 1000;
+
 export const createPendingPayment = async (data: PaymentInsert) => {
   const [result] = await db.insert(payment).values(data).returning();
-  return result;
-};
-
-export const updatePaymentQris = async (id: number, qrisUrl: string) => {
-  const [result] = await db
-    .update(payment)
-    .set({ qrisUrl })
-    .where(eq(payment.id, id))
-    .returning();
   return result;
 };
 
@@ -29,8 +24,11 @@ export const getPaymentsByStoreId = async (storeId: string) => {
   });
 };
 
-// Dipanggil saat callback WijayaPay masuk dengan status "paid".
-// Update payment ke paid, lalu extend subscription store.
+export const isPaymentExpired = (p: { status: string; createdAt: Date }) =>
+  p.status === 'pending' && Date.now() - p.createdAt.getTime() > PAYMENT_TTL_MS;
+
+// Dipanggil saat cek status ke Saweria mengembalikan SUCCESS.
+// Update payment ke paid, lalu extend subscription store. Idempoten — hanya proses payment yang masih pending.
 export const fulfillPayment = async (invoiceId: string, paidAt: Date) => {
   const p = await getPaymentByInvoiceId(invoiceId);
   if (!p || p.status !== 'pending') return null;

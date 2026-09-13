@@ -9,6 +9,7 @@ import {
   boolean,
   date,
   uniqueIndex,
+  text,
 } from "drizzle-orm/pg-core";
 
 export const enumRole = pgEnum("role", ["user", "admin", "superadmin"]);
@@ -54,7 +55,8 @@ export const payment = pgTable("payment", {
   amount: integer("amount").notNull(),
   durationDays: integer("duration_days").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
-  qrisUrl: varchar("qris_url", { length: 500 }),
+  // invoiceId = donation id dari Saweria; qrString = payload QRIS mentah (di-render jadi QR di frontend)
+  qrString: text("qr_string"),
   note: varchar("note", { length: 255 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   paidAt: timestamp("paid_at"),

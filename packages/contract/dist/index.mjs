@@ -33,9 +33,17 @@ var dataPrice = [
   { price: 5e4, time: 50 * DAY, bonus: 70 * DAY, name: "4 Bulan", desc: "Untuk toko yang aktif." },
   { price: 1e5, time: 100 * DAY, bonus: 265 * DAY, name: "Tahunan", desc: "Hemat sampai 73%.", badge: "HEMAT" }
 ];
+
+// src/payment.ts
+import { z as z2 } from "zod";
+var generatePaymentSchema = z2.object({
+  packageIndex: z2.number({ message: "packageIndex harus angka" }).int().min(0, "Paket tidak valid").max(dataPrice.length - 1, "Paket tidak valid"),
+  email: z2.string().email("Email tidak valid").max(100, "Email terlalu panjang")
+});
 export {
   balanceAdjustSchema,
   dataPrice,
+  generatePaymentSchema,
   googleAuthSchema,
   referStoreSchema,
   roleUpdateSchema,

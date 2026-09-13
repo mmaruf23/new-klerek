@@ -1,20 +1,18 @@
 import { Hono } from "hono";
-import type { ApiResponse } from "@packages/contract";
+import { generatePaymentSchema, dataPrice } from "@packages/contract";
+import type { ApiResponse, JwtClaims } from "@packages/contract";
 import { cookieMiddleware } from "../auth/middleware.js";
-import { dataPrice } from "../subscription/data.js";
-import { createQris, QrisResult, verifyCallbackSignature, type WijayapayCallback } from "../../utils/wijayapay.js";
+import { createDonation, checkDonationStatus } from "../../utils/saweria.js";
 import {
   createPendingPayment,
-  updatePaymentQris,
   getPaymentByInvoiceId,
   getPaymentsByStoreId,
   fulfillPayment,
   expirePayment,
+  isPaymentExpired,
 } from "./service.js";
 import { Exception } from "../../error.js";
 import { sendLog } from "../../utils/telegram.js";
-import { config } from "../../config.js";
-import type { JwtClaims } from "@packages/contract";
 
 export const paymentHandler = new Hono()
 
@@ -30,82 +28,84 @@ export const paymentHandler = new Hono()
     });
   })
 
-  // POST /payment/generate — buat QRIS baru
-  // Body: { packageIndex: number }
+  // POST /payment/generate — buat donasi QRIS di Saweria
+  // Body: { packageIndex: number, email: string }
   .post("/generate", cookieMiddleware, async (c) => {
     const claims = c.get("jwtPayload") as JwtClaims | undefined;
     if (!claims?.store_id) throw Exception.Unauthorized();
 
-    const body = await c.req.json<{ packageIndex: number }>();
-    const pkg = dataPrice[body.packageIndex];
-    if (pkg === undefined) throw Exception.BadRequest("invalid package index");
+    const result = generatePaymentSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!result.success) {
+      return c.json({ success: false, message: result.error.issues[0].message }, 400);
+    }
+    const { packageIndex, email } = result.data;
+    const pkg = dataPrice[packageIndex];
 
     const durationDays = Math.floor((pkg.time + (pkg.bonus ?? 0)) / 86_400);
-    const refId = `klerek-${claims.store_id}-${Date.now()}`;
+    // message tampil di dashboard Saweria — dipakai untuk melacak toko & paket
+    const message = `klerek-${claims.store_id}-${Date.now()}`;
 
-    const pending = await createPendingPayment({
-      invoiceId: refId,
-      storeId: claims.store_id,
-      amount: pkg.price,
-      durationDays,
-    });
-
-    let qrisResult: QrisResult;
+    let donation;
     try {
-      qrisResult = await createQris({
-        refId,
-        nominal: pkg.price,
+      donation = await createDonation({
+        amount: pkg.price,
+        message,
+        donatorName: `Toko ${claims.store_id}`,
+        donatorEmail: email,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       await sendLog(`🔴 GENERATE QRIS GAGAL\nToko: ${claims.store_id}\n${msg}`);
-      console.error("Error creating QRIS:", err);
+      console.error("Error creating Saweria donation:", err);
       throw Exception.ServerError();
     }
 
-    const updated = await updatePaymentQris(pending.id, qrisResult.qrImage);
+    // invoiceId = donation id Saweria, dipakai untuk cek status
+    const created = await createPendingPayment({
+      invoiceId: donation.id,
+      storeId: claims.store_id,
+      amount: pkg.price,
+      durationDays,
+      qrString: donation.qrString,
+      note: message,
+    });
 
-    return c.json<ApiResponse<typeof updated>>({ success: true, data: updated }, 201);
+    return c.json<ApiResponse<typeof created>>({ success: true, data: created }, 201);
   })
 
-  // GET /payment/:invoiceId — cek status payment
+  // GET /payment/:invoiceId — cek status payment.
+  // Tidak ada webhook dari Saweria: status di-poll aktif ke Saweria selama masih pending.
   .get("/:invoiceId", cookieMiddleware, async (c) => {
     const claims = c.get("jwtPayload") as JwtClaims | undefined;
     if (!claims?.store_id) throw Exception.Unauthorized();
 
     const invoiceId = c.req.param("invoiceId");
-    const p = await getPaymentByInvoiceId(invoiceId);
+    let p = await getPaymentByInvoiceId(invoiceId);
 
     if (!p) throw Exception.NotFound();
     if (p.storeId !== claims.store_id) throw Exception.Unauthorized();
 
-    return c.json<ApiResponse<typeof p>>({ success: true, data: p });
-  })
-
-  // POST /payment/callback — webhook dari WijayaPay
-  .post("/callback", async (c) => {
-    const { data, status } = await c.req.json<WijayapayCallback>();
-    const xSignature = c.req.header("x-signature") ?? "";
-
-    if (!verifyCallbackSignature(xSignature, data.ref_id)) {
-      await sendLog(`🔴 CALLBACK SIGNATURE TIDAK VALID\nRef ID: ${data.ref_id}`);
-      console.warn("Invalid callback signature for ref_id:", data.ref_id);
-      return c.json({ status: false }, 401);
-    }
-
-    if (status === "paid") {
-      const paidAt = data.updated_at ? new Date(data.updated_at) : new Date();
-      const result = await fulfillPayment(data.ref_id, paidAt);
-
-      if (result) {
-        await sendLog(
-          `✅ PEMBAYARAN BERHASIL\nToko: ${result.payment.storeId}\nNominal: Rp${result.payment.amount.toLocaleString("id-ID")}\nAktif hingga: ${result.subscription.expiresAt.toLocaleDateString("id-ID")}`,
-        );
+    if (p.status === "pending") {
+      let status: Awaited<ReturnType<typeof checkDonationStatus>> = "PENDING";
+      try {
+        status = await checkDonationStatus(invoiceId);
+      } catch (err) {
+        // Gagal cek ke Saweria bukan alasan menandai expired — biarkan frontend retry
+        console.error("Error checking Saweria status:", err);
       }
-    } else if (status === "expired" || status === "pending") {
-      await expirePayment(data.ref_id);
+
+      if (status === "SUCCESS") {
+        const result = await fulfillPayment(invoiceId, new Date());
+        if (result) {
+          p = result.payment;
+          await sendLog(
+            `✅ PEMBAYARAN BERHASIL\nToko: ${result.payment.storeId}\nNominal: Rp${result.payment.amount.toLocaleString("id-ID")}\nAktif hingga: ${result.subscription.expiresAt.toLocaleDateString("id-ID")}`,
+          );
+        }
+      } else if (isPaymentExpired(p)) {
+        p = await expirePayment(invoiceId);
+      }
     }
 
-    // WijayaPay mengharuskan response { status: true } agar tidak retry
-    return c.json({ status: true });
+    return c.json<ApiResponse<typeof p>>({ success: true, data: p });
   });

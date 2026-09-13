@@ -22,6 +22,7 @@ var index_exports = {};
 __export(index_exports, {
   balanceAdjustSchema: () => balanceAdjustSchema,
   dataPrice: () => dataPrice,
+  generatePaymentSchema: () => generatePaymentSchema,
   googleAuthSchema: () => googleAuthSchema,
   referStoreSchema: () => referStoreSchema,
   roleUpdateSchema: () => roleUpdateSchema,
@@ -64,10 +65,18 @@ var dataPrice = [
   { price: 5e4, time: 50 * DAY, bonus: 70 * DAY, name: "4 Bulan", desc: "Untuk toko yang aktif." },
   { price: 1e5, time: 100 * DAY, bonus: 265 * DAY, name: "Tahunan", desc: "Hemat sampai 73%.", badge: "HEMAT" }
 ];
+
+// src/payment.ts
+var import_zod2 = require("zod");
+var generatePaymentSchema = import_zod2.z.object({
+  packageIndex: import_zod2.z.number({ message: "packageIndex harus angka" }).int().min(0, "Paket tidak valid").max(dataPrice.length - 1, "Paket tidak valid"),
+  email: import_zod2.z.string().email("Email tidak valid").max(100, "Email terlalu panjang")
+});
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   balanceAdjustSchema,
   dataPrice,
+  generatePaymentSchema,
   googleAuthSchema,
   referStoreSchema,
   roleUpdateSchema,

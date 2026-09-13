@@ -4,7 +4,8 @@ import { dataPrice } from '@packages/contract';
 import type { Summary } from '@packages/contract';
 import { generateQris, checkPayment, type Payment } from '@/services/paymentApi';
 import { fetchStorePublic } from '@/services/adminApi';
-import { ArrowLeft, CheckCircle, Download, Info, QrCode, Search, Zap } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { ArrowLeft, CheckCircle, Download, Info, Mail, QrCode, Search, Zap } from 'lucide-react';
 
 const INFO_SECTIONS = [
   {
@@ -91,20 +92,16 @@ function QrisView({
   const pkg = dataPrice[pkgIdx];
   const totalDays = pkg ? Math.round((pkg.time + (pkg.bonus ?? 0)) / 86_400) : 0;
 
-  const handleSaveQr = async () => {
-    if (!payment.qrisUrl) return;
-    try {
-      const res = await fetch(payment.qrisUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `qris-${payment.invoiceId}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      window.open(payment.qrisUrl, '_blank');
-    }
+  const qrRef = useRef<HTMLDivElement>(null);
+
+  // QR di-render lokal dari qr_string Saweria — simpan = export canvas ke PNG
+  const handleSaveQr = () => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `qris-${payment.invoiceId}.png`;
+    a.click();
   };
 
   const renderQrisCard = () => (
@@ -116,8 +113,10 @@ function QrisView({
         </span>
       </div>
 
-      {payment.qrisUrl ? (
-        <img src={payment.qrisUrl} alt="QRIS" className="w-full aspect-square object-contain rounded-xl" />
+      {payment.qrString ? (
+        <div ref={qrRef} className="w-full aspect-square rounded-xl flex items-center justify-center [&>canvas]:w-full! [&>canvas]:h-full!">
+          <QRCodeCanvas value={payment.qrString} size={512} level="M" includeMargin />
+        </div>
       ) : (
         <div className="w-full aspect-square rounded-xl bg-slate-100 flex items-center justify-center">
           <p className="text-sm text-slate-400 animate-pulse">Memuat QR...</p>
@@ -130,7 +129,7 @@ function QrisView({
         </p>
         <button
           onClick={handleSaveQr}
-          disabled={!payment.qrisUrl}
+          disabled={!payment.qrString}
           className="flex items-center gap-1.5 text-xs text-slate-600 font-medium border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40 transition-colors"
         >
           <Download className="w-3 h-3" />
@@ -313,6 +312,9 @@ export default function MembershipPage() {
   const [storeInput, setStoreInput] = useState('');
   const [storeInputLoading, setStoreInputLoading] = useState(false);
   const [storeInputError, setStoreInputError] = useState('');
+  // Email wajib untuk Saweria — dipakai sebagai identitas donatur
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = () => {
@@ -345,10 +347,16 @@ export default function MembershipPage() {
   };
 
   const handlePilih = async (idx: number) => {
+    const trimmedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailError('Masukkan email yang valid');
+      setSelectedPkg(idx);
+      return;
+    }
     setLoading(idx);
     setError(null);
     try {
-      const result = await generateQris(idx);
+      const result = await generateQris({ packageIndex: idx, email: trimmedEmail });
       setPayment(result);
       setSelectedPkg(idx);
       setPollStatus('polling');
@@ -388,6 +396,25 @@ export default function MembershipPage() {
     setPollStatus(null);
     setView('packages');
   };
+
+  const renderEmailInput = (className = '') => (
+    <div className={className}>
+      <div className="relative">
+        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+          placeholder="Email Anda (untuk bukti pembayaran)"
+          autoComplete="email"
+          className={`w-full text-sm text-black border rounded-xl pl-9 pr-3 py-2.5 outline-none bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-100 ${
+            emailError ? 'border-red-400 focus:border-red-400' : 'border-slate-200 focus:border-indigo-400'
+          }`}
+        />
+      </div>
+      {emailError && <p className="text-xs text-red-500 mt-1.5">{emailError}</p>}
+    </div>
+  );
 
   if (view === 'qris' && payment) {
     return (
@@ -453,8 +480,11 @@ export default function MembershipPage() {
         </div>
       )}
 
+      {/* ── Mobile email input ── */}
+      {renderEmailInput('md:hidden px-5 mb-5')}
+
       {/* ── Desktop: store badge / input ── */}
-      <div className="hidden md:flex justify-center mb-6">
+      <div className="hidden md:flex justify-center mb-4">
         {resolvedStoreName ? (
           <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full">
             <span>▶</span>
@@ -497,6 +527,7 @@ export default function MembershipPage() {
         <p className="text-slate-500 text-base">
           Tanpa langganan otomatis. Aktifkan akses upload untuk satu toko, kapanpun butuh.
         </p>
+        {renderEmailInput('max-w-sm mx-auto mt-6 text-left')}
       </div>
 
       {/* Error */}

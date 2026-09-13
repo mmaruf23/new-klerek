@@ -18,6 +18,7 @@ new-klerek/
 │   └── schema/     → Abaikan, tidak jadi digunakan
 ├── Makefile        → Shortcut dev & deploy
 ├── deploy.sh       → Script deploy Vercel CLI (api, web, atau keduanya)
+├── env.sh          → Kelola env vars project Vercel (list/push/pull/set/rm)
 └── .env.example    → Template env vars termasuk konfigurasi Vercel
 ```
 
@@ -32,6 +33,9 @@ make deploy-api   # deploy api saja
 make deploy-web   # deploy web saja
 make migrate-run  # jalankan migrasi DB
 make migrate-gen  # generate file migrasi baru
+make env-list APP=api   # lihat env di Vercel (APP=api|web, default api)
+make env-push APP=web   # upload apps/<app>/.env.production ke Vercel
+make env-pull APP=api   # download env Vercel ke apps/<app>/.env.production
 ```
 
 ---
@@ -47,6 +51,7 @@ pnpm --filter @packages/contract build
 Berisi:
 - `response.ts` — `ApiResponse<T>`, `Summary`, `Data`, `StoreResponse`
 - `jwt.ts` — `JwtClaims` interface (extend `JwtPayload`)
+- `payment.ts` — `generatePaymentSchema` + `GeneratePaymentInput`, `PaymentStatus`, `PaymentResponse`
 - `auth.ts` — Zod schemas (`googleAuthSchema`, `referStoreSchema`) + inferred types (`GoogleAuthInput`, `ReferStoreInput`) + `ProfileResponse`, `LoginResponse`, `ReferredStore`
 - `constant.ts` — konstanta `time`
 
@@ -81,10 +86,9 @@ Berisi:
 | GET | `/health/db` | — | DB health check (jalankan SELECT 1) |
 | GET | `/health/telegram` | — | Kirim ping ke Telegram, cek konfigurasi bot |
 | GET | `/health/config` | authMiddleware | Lihat config aktif (env vars) |
-| POST | `/payment/generate` | cookie | Generate QRIS via WijayaPay |
+| POST | `/payment/generate` | cookie | Buat donasi QRIS di Saweria (body: `packageIndex`, `email`) |
 | GET | `/payment` | cookie | List semua payment milik store |
-| GET | `/payment/:invoiceId` | cookie | Cek status payment |
-| POST | `/payment/callback` | — | Webhook WijayaPay (update status + buat subscription + kredit balance referrer 50%) |
+| GET | `/payment/:invoiceId` | cookie | Cek status payment — poll aktif ke Saweria; jika SUCCESS: buat subscription + kredit balance referrer 50% |
 | GET | `/admin/users` | authMiddleware + admin | List user + pagination + search `q` (nama/email) |
 | GET | `/admin/users/:id` | authMiddleware + admin | Detail user + toko referral + balance |
 | POST | `/admin/users/:id/balance` | authMiddleware + admin | Sesuaikan balance user manual (credit/debit + note) |
@@ -130,8 +134,8 @@ users:        id (uuid PK), name, email (unique), googleId (unique), avatarUrl,
 store:        id (varchar 4, PK), name, branchId, createdAt,
               referrerId (FK → users.refferalCode, ON DELETE SET NULL)
 subscription: id (auto int PK), storeId (FK→store CASCADE), createdAt, expiresAt
-payment:      id (auto int PK), invoiceId (unique), storeId (FK→store CASCADE),
-              amount (IDR), durationDays, status, qrisUrl, note, createdAt, paidAt
+payment:      id (auto int PK), invoiceId (unique, = donation id Saweria), storeId (FK→store CASCADE),
+              amount (IDR), durationDays, status, qrString (payload QRIS mentah), note, createdAt, paidAt
 balance:      id (auto int PK), userId (FK→users CASCADE), amount, createdAt
 daily_summary: id (auto int PK), storeId (FK→store CASCADE), userId (kasir, varchar 8),
               dateTx (date), totalFaktur, memberFaktur, totalCash, createdAt, updatedAt
@@ -141,7 +145,7 @@ daily_summary: id (auto int PK), storeId (FK→store CASCADE), userId (kasir, va
 - Store ID: 4 karakter, campuran huruf + angka
 - Referral code: 6 karakter, huruf kapital + angka, auto-generate saat login Google pertama
 - `payment.status`: `pending` → `paid` | `failed` | `expired`
-- `payment.note`: keterangan bebas, bisa diisi admin untuk penambahan manual
+- `payment.note`: keterangan bebas; saat generate diisi `klerek-{storeId}-{timestamp}` (= `message` yang tampil di dashboard Saweria), bisa diisi admin untuk penambahan manual
 - Tidak ada seed user — user dibuat otomatis saat login Google (selalu role `user`). Role adalah DB-authoritative: superadmin pertama di-bootstrap via `src/db/seed.ts` (`pnpm --filter api exec tsx ./src/db/seed.ts <email>`), selanjutnya admin ⇄ user via panel superadmin
 - Kolom `refferalCode` di schema JS (dua 'f') → kolom `referal_code` di DB (satu 'r') — typo lama, jangan diperbaiki tanpa migrasi
 
@@ -191,25 +195,25 @@ Hati-hati saat impor ulang: `subscription` tidak punya unique key, jadi menjalan
 - Sertakan list store yang `referrerId = user.refferalCode`
 - Return `ProfileResponse`: `{ id, name, email, avatarUrl, role, referralCode, referredStores[], totalBalance }`
 
-### Payment Flow (WijayaPay)
+### Payment Flow (Saweria)
+
+Menggunakan endpoint internal `backend.saweria.co` (tidak terdokumentasi resmi, hasil eksplorasi manual). Tidak ada webhook — status di-poll.
 
 **Generate QRIS (`POST /payment/generate`):**
-1. Kasir pilih paket (`packageIndex` dari `subscription/data.ts`)
-2. Buat record `payment` dengan status `pending`, `invoiceId = refId` = `klerek-{storeId}-{timestamp}`
-3. Panggil WijayaPay `POST /transaction/create` dengan `X-Signature` header
-4. Update record dengan `qrisUrl` dari response WijayaPay
-5. Return data payment (termasuk `qrisUrl` untuk ditampilkan ke kasir)
+1. Kasir isi email + pilih paket (`packageIndex` dari `subscription/data.ts`), validasi `generatePaymentSchema`
+2. Panggil Saweria `POST /donations/snap/{SAWERIA_USER_ID}` dengan `amount`, `payment_type: "qris"`, `message = klerek-{storeId}-{timestamp}`, `customer_info.email` dari kasir
+3. Simpan record `payment` status `pending`: `invoiceId` = `data.id` Saweria, `qrString` = `data.qr_string`, `note` = message
+4. Return data payment — frontend render QR dari `qrString` dengan `qrcode.react`
 
-**Callback WijayaPay (`POST /payment/callback`):**
-1. Verifikasi `X-Signature` header: `MD5(code_merchant + api_key + ref_id)`
-2. Cari payment by `ref_id`
-3. Jika `status: "paid"` → update payment + buat subscription baru
-4. Subscription di-extend dari expiry aktif (bukan dari sekarang)
-5. Response wajib `{ status: true }` agar WijayaPay tidak retry
+**Cek status (`GET /payment/:invoiceId`):**
+1. Jika payment masih `pending` → panggil Saweria `GET /donations/qris/snap/{id}`
+2. `transaction_status: "SUCCESS"` → `fulfillPayment`: update `paid` + buat subscription (extend dari expiry aktif) + kredit balance referrer 50% (idempoten, hanya untuk payment `pending`)
+3. Masih `PENDING` tapi umur > `PAYMENT_TTL_MS` (15 menit, sama dengan countdown frontend) → tandai `expired`
+4. Gagal hubungi Saweria → status tidak diubah, frontend retry
 
-**WijayaPay utility** di `src/utils/wijayapay.ts`:
-- `createQris(params)` — panggil API WijayaPay, return `qrImage`, `qrString`, `expiredAt`
-- `verifyCallbackSignature(xSignature, refId)` — validasi signature callback
+**Saweria utility** di `src/utils/saweria.ts`:
+- `createDonation({ amount, message, donatorName, donatorEmail })` — return `{ id, qrString, amount, status }`
+- `checkDonationStatus(donationId)` — return `"PENDING" | "SUCCESS"`
 
 ### Pagination (`GET /store`)
 
@@ -220,7 +224,7 @@ Response: `{ data, total, limit, offset, hasNext }`.
 
 - Trial: 7 hari otomatis saat pertama upload
 - Paket berbayar: 1K–100K IDR (lihat `subscription/data.ts`)
-- Payment gateway: **WijayaPay** — sudah diimplementasikan
+- Payment gateway: **Saweria** (endpoint internal, polling tanpa webhook)
 - Expired → 401 EXPIRED ACCESS
 
 ### Logging (Telegram Bot)
@@ -233,7 +237,6 @@ Implementasi di `src/utils/telegram.ts`. Semua fungsi **async — wajib di-`awai
 Event yang dikirim ke Telegram:
 - 🔴 Server error (500) / DB health check gagal
 - 🔴 Generate QRIS gagal
-- 🔴 Callback signature tidak valid
 - 🏪 Toko baru terdaftar
 - 👤 User baru login via Google
 - ⚠️ Subscription expired saat upload
@@ -264,10 +267,8 @@ Semua via class `Exception` di `error.ts` → `HTTPException` Hono:
 | `TELEGRAM_BOT_TOKEN` | `""` | Token bot Telegram |
 | `TELEGRAM_CHAT_ID` | `""` | Chat/group ID tujuan log |
 | `GOOGLE_CLIENT_ID` | `""` | OAuth Client ID Google — cek `aud` saat verifikasi ID token |
-| `WIJAYAPAY_MERCHANT_ID` | `""` | Code merchant WijayaPay |
-| `WIJAYAPAY_API_KEY` | `""` | API key WijayaPay |
-| `WIJAYAPAY_BASE_URL` | `https://wijayapay.com/api` | Base URL API WijayaPay |
-| `WIJAYAPAY_CALLBACK_URL` | `""` | URL callback dikirim ke WijayaPay saat generate, contoh: `https://api.vercel.app/payment/callback` |
+| `SAWERIA_BASE_URL` | `https://backend.saweria.co` | Base URL endpoint internal Saweria |
+| `SAWERIA_USER_ID` | `""` | User ID akun Saweria penerima donasi (nilai tetap) |
 
 Lihat `apps/api/.example.env` untuk template lengkap.
 
@@ -393,6 +394,18 @@ Di Vercel dashboard, untuk masing-masing project:
 - Project `apps/api` → Settings → General → **Root Directory** = `apps/api`
 - Project `apps/web` → Settings → General → **Root Directory** = `apps/web`
 
+### Kelola Env Vars di Vercel (`env.sh`)
+
+```bash
+./env.sh <api|web> list              # tampilkan env
+./env.sh <api|web> push [file]       # upload semua KEY=VALUE dari file (default apps/<app>/.env.production)
+./env.sh <api|web> pull [file]       # download env ke file
+./env.sh <api|web> set KEY VALUE     # set satu variabel (timpa jika ada)
+./env.sh <api|web> rm KEY            # hapus satu variabel
+```
+
+Target environment default `production`; ganti dengan `VERCEL_ENV=preview ./env.sh ...`. `push`/`set` menghapus key lama lalu menambah ulang (Vercel menolak duplikat). Setelah ubah env, **redeploy** agar aktif. `apps/*/.env.production` di-gitignore.
+
 ### Env Vars Deployment
 
 | Key | Keterangan |
@@ -408,7 +421,7 @@ Di Vercel dashboard, untuk masing-masing project:
 
 - [x] Refresh token — JWT expire 10 menit, belum ada mekanisme refresh
 - [x] Halaman frontend untuk payment flow (generate QRIS, tampilkan QR, cek status)
-- [x] Implementasi payment flow (WijayaPay — generate QRIS, callback, auto-extend subscription)
+- [x] Implementasi payment flow (Saweria — generate QRIS, polling status, auto-extend subscription)
 - [x] Deploy frontend ke Vercel (via `deploy.sh` / Makefile)
 - [x] Halaman admin untuk lihat daftar store
 - [x] Registrasi user + halaman register (digantikan auto-register via Google SSO)

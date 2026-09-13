@@ -1,25 +1,14 @@
-import type { ApiResponse } from '@packages/contract';
+import type { ApiResponse, GeneratePaymentInput, PaymentResponse } from '@packages/contract';
 import { config } from '@/config';
 
-export interface Payment {
-  id: number;
-  invoiceId: string;
-  storeId: string;
-  amount: number;
-  durationDays: number;
-  status: 'pending' | 'paid' | 'failed' | 'expired';
-  qrisUrl: string | null;
-  note: string | null;
-  createdAt: string;
-  paidAt: string | null;
-}
+export type Payment = PaymentResponse;
 
-export async function generateQris(packageIndex: number): Promise<Payment> {
+export async function generateQris(input: GeneratePaymentInput): Promise<Payment> {
   const res = await fetch(`${config.API_URL}/payment/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ packageIndex }),
+    body: JSON.stringify(input),
   });
   const json: ApiResponse<Payment> = await res.json();
   if (!json.success || !json.data) throw new Error(json.message ?? 'Gagal membuat QRIS');
