@@ -335,7 +335,6 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
             {stores.data.map((store, idx) => {
               const status = getSubStatus(store);
-              const initials = getInitials(store.name);
               const avatarColor = getAvatarColor(store.id);
               const subLabel = getSubLabel(store.subs);
               const txCount = DUMMY_TX[idx % DUMMY_TX.length];
@@ -343,8 +342,8 @@ export default function DashboardPage() {
 
               return (
                 <div key={store.id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className={`w-11 h-11 ${avatarColor} rounded-xl flex items-center justify-center shrink-0`}>
-                    <span className="text-white text-sm font-bold">{initials}</span>
+                  <div className={`w-16 h-11 ${avatarColor} rounded-xl flex items-center justify-center shrink-0`}>
+                    <span className="text-white text-sm font-bold font-mono tracking-wider uppercase">{store.id}</span>
                   </div>
 
                   <div className="flex-1 min-w-0">
