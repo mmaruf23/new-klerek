@@ -4,9 +4,23 @@ import { googleAuthSchema } from "@packages/contract";
 import type { ApiResponse, LoginResponse, ProfileResponse, RefreshResponse } from "@packages/contract";
 import { authMiddleware } from "./middleware.js";
 import type { JwtClaims } from "@packages/contract";
-import { setCookie, getCookie } from "hono/cookie";
+import { setCookie, getCookie, deleteCookie } from "hono/cookie";
+import type { CookieOptions } from "hono/utils/cookie";
 import { config } from "../../config.js";
 import { Balance } from "../../db/schema.js";
+
+const REFRESH_COOKIE_KEY = "refresh_token";
+
+// atribut harus sama persis saat set & delete, kalau tidak browser tidak menghapus cookie
+const refreshCookieOptions = (): CookieOptions => {
+  const isProduction = config.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "None" : "Lax",
+    path: "/",
+  };
+};
 
 export const authHandler = new Hono()
   .post("/google", async (c) => {
@@ -17,14 +31,7 @@ export const authHandler = new Hono()
     }
 
     const { user, token, refreshToken } = await loginWithGoogle(result.data);
-    const isProduction = config.NODE_ENV === "production";
-    setCookie(c, "refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    setCookie(c, REFRESH_COOKIE_KEY, refreshToken, { ...refreshCookieOptions(), maxAge: 60 * 60 * 24 * 7 });
     return c.json<ApiResponse<LoginResponse>>({
       success: true,
       data: {
@@ -34,10 +41,15 @@ export const authHandler = new Hono()
     });
   })
   .post("/refresh", async (c) => {
-    const refreshToken = getCookie(c, "refresh_token");
+    const refreshToken = getCookie(c, REFRESH_COOKIE_KEY);
     if (!refreshToken) return c.json<ApiResponse>({ success: false, message: "Refresh token tidak ditemukan" }, 401);
     const data = await refreshUserToken(refreshToken);
     return c.json<ApiResponse<RefreshResponse>>({ success: true, data });
+  })
+  // refresh token stateless (tidak disimpan di DB), jadi logout = hapus cookie-nya
+  .post("/logout", (c) => {
+    deleteCookie(c, REFRESH_COOKIE_KEY, refreshCookieOptions());
+    return c.json<ApiResponse>({ success: true, message: "Berhasil logout" });
   })
   .get("/me", authMiddleware, async (c) => {
     const payload = c.get("jwtPayload") as JwtClaims;

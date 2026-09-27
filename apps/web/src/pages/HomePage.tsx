@@ -1,20 +1,7 @@
 import { useRef, useState, type DragEvent } from "react";
 import { Upload, ChevronRight, ShieldCheck, Sparkles, FileArchive } from "lucide-react";
 import { useUpload, getRecentUploads } from "@/hooks/useUpload";
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 2) return "baru saja";
-  if (min < 60) return `${min} menit lalu`;
-  const hours = Math.floor(min / 60);
-  if (hours < 6) return `${hours} jam lalu`;
-  if (new Date(iso).toDateString() === new Date().toDateString()) return "tadi";
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (new Date(iso).toDateString() === yesterday.toDateString()) return "kemarin";
-  return new Intl.DateTimeFormat("id-ID", { dateStyle: "short" }).format(new Date(iso));
-}
+import { timeAgo } from "@/utils/format";
 
 const CARA_KERJA = [
   { title: "Upload file .zip", sub: "Hasil ekspor dari kasir" },
@@ -243,7 +230,7 @@ export default function HomePage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-800 truncate">{r.name}</p>
                         <p className="text-[10px] text-slate-400 truncate">
-                          {r.storeName} · {relativeTime(r.timestamp)}
+                          {r.storeName} · {timeAgo(r.timestamp)}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />

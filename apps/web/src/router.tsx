@@ -11,7 +11,7 @@ import ReferPage from "./pages/ReferPage";
 import UsersPage from "./pages/admin/UsersPage";
 import Layout from "./components/layout/Layout";
 import ContactPage from "./pages/ContactPage";
-import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware } from "@/lib/authGuard";
+import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware, requireSuperadminMiddleware } from "@/lib/authGuard";
 import { fetchStores } from "./services/adminApi";
 import { fetchUsers } from "./services/adminUsersApi";
 import { fetchProfile } from "./services/authApi";
@@ -51,7 +51,7 @@ export const router = createBrowserRouter([
     children: [
       { path: routes.dashboard, middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
       { path: routes.profile, middleware: [requireAuthMiddleware], loader: profileLoader, element: <ProfilePage /> },
-      { path: routes.adminUsers, middleware: [requireAuthMiddleware], loader: ({ request }: LoaderFunctionArgs) => fetchUsers(request), element: <UsersPage /> },
+      { path: routes.adminUsers, middleware: [requireSuperadminMiddleware], loader: ({ request }: LoaderFunctionArgs) => fetchUsers(request), element: <UsersPage /> },
     ],
   },
   {

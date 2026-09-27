@@ -4,18 +4,9 @@ import { Search, X, ChevronRight, Plus, Minus, Store, Check, ShieldCheck, User a
 import type { AdminUserItem, AdminUserDetail } from "@packages/contract";
 import type { ApiResponse } from "@packages/contract";
 import { fetchUserDetail, adjustBalance, updateUserRole } from "@/services/adminUsersApi";
-import { config } from "@/config";
-
-function currentViewerRole(): string | null {
-  const token = sessionStorage.getItem(config.ACCESS_TOKEN_KEY);
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return payload.role ?? null;
-  } catch {
-    return null;
-  }
-}
+import { getCurrentUser } from "@/lib/session";
+import { getAvatarColor, getInitials } from "@/utils/avatar";
+import { formatDate, formatRupiah } from "@/utils/format";
 
 const ROLE_LABEL: Record<string, string> = { user: "User", admin: "Admin", superadmin: "Superadmin" };
 const ROLE_COLOR: Record<string, string> = {
@@ -23,27 +14,6 @@ const ROLE_COLOR: Record<string, string> = {
   admin: "bg-indigo-100 text-indigo-700",
   superadmin: "bg-amber-100 text-amber-700",
 };
-
-function fmt(n: number) {
-  return `Rp ${n.toLocaleString("id-ID")}`;
-}
-
-function getInitials(name: string) {
-  return name
-    .split(/[\s—–-]+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-const AVATAR_COLORS = [
-  "bg-violet-500", "bg-emerald-500", "bg-orange-400",
-  "bg-rose-400", "bg-amber-500", "bg-blue-500", "bg-teal-500", "bg-pink-500",
-];
-function avatarColor(id: string) {
-  const hash = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
 
 type ModalView = "detail" | "adjust";
 
@@ -75,7 +45,7 @@ function UserDetailModal({
   const [roleSubmitting, setRoleSubmitting] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
 
-  const isSuperadminViewer = currentViewerRole() === "superadmin";
+  const isSuperadminViewer = getCurrentUser()?.role === "superadmin";
 
   useEffect(() => {
     fetchUserDetail(userId)
@@ -141,7 +111,7 @@ function UserDetailModal({
             <div className="space-y-4">
               {/* User info */}
               <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 ${avatarColor(detail.id)} rounded-2xl flex items-center justify-center shrink-0`}>
+                <div className={`w-12 h-12 ${getAvatarColor(detail.id)} rounded-2xl flex items-center justify-center shrink-0`}>
                   <span className="text-white font-bold">{getInitials(detail.name)}</span>
                 </div>
                 <div>
@@ -158,7 +128,7 @@ function UserDetailModal({
                 <div className="bg-slate-50 rounded-2xl p-3">
                   <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-1">Balance</p>
                   <p className={`text-lg font-extrabold ${detail.totalBalance < 0 ? "text-red-500" : "text-slate-900"}`}>
-                    {fmt(detail.totalBalance)}
+                    {formatRupiah(detail.totalBalance)}
                   </p>
                 </div>
                 <div className="bg-slate-50 rounded-2xl p-3">
@@ -189,7 +159,7 @@ function UserDetailModal({
 
               {/* Joined */}
               <p className="text-xs text-slate-400">
-                Bergabung {new Date(detail.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                Bergabung {formatDate(detail.createdAt)}
               </p>
 
               {/* Role management (superadmin only, tidak untuk target superadmin) */}
@@ -322,7 +292,7 @@ function UserDetailModal({
                     disabled={adjust.submitting || !adjust.amount}
                     className={`w-full py-3 rounded-2xl font-semibold text-sm text-white transition-colors disabled:opacity-60 ${adjust.type === "credit" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-400 hover:bg-red-500"}`}
                   >
-                    {adjust.submitting ? "Memproses..." : `${adjust.type === "credit" ? "Tambah" : "Kurangi"} ${adjust.amount ? fmt(parseInt(adjust.amount) || 0) : "Balance"}`}
+                    {adjust.submitting ? "Memproses..." : `${adjust.type === "credit" ? "Tambah" : "Kurangi"} ${adjust.amount ? formatRupiah(parseInt(adjust.amount) || 0) : "Balance"}`}
                   </button>
                 </>
               )}
@@ -410,7 +380,7 @@ export default function UsersPage() {
                 onClick={() => setSelectedUserId(user.id)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors text-left"
               >
-                <div className={`w-11 h-11 ${avatarColor(user.id)} rounded-xl flex items-center justify-center shrink-0`}>
+                <div className={`w-11 h-11 ${getAvatarColor(user.id)} rounded-xl flex items-center justify-center shrink-0`}>
                   <span className="text-white text-sm font-bold">{getInitials(user.name)}</span>
                 </div>
 
@@ -426,7 +396,7 @@ export default function UsersPage() {
 
                 <div className="shrink-0 text-right">
                   <p className={`text-xs font-semibold ${user.totalBalance > 0 ? "text-emerald-600" : "text-slate-400"}`}>
-                    {fmt(user.totalBalance)}
+                    {formatRupiah(user.totalBalance)}
                   </p>
                   {user.referredStoreCount > 0 && (
                     <p className="text-[10px] text-slate-400 mt-0.5">{user.referredStoreCount} toko</p>

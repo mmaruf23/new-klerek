@@ -6,6 +6,9 @@ import { generateQris, checkPayment, type Payment } from '@/services/paymentApi'
 import { fetchStorePublic } from '@/services/adminApi';
 import { QRCodeCanvas } from 'qrcode.react';
 import { ArrowLeft, CheckCircle, Download, Info, Mail, QrCode, Search, Zap } from 'lucide-react';
+import { useCountdown } from '@/hooks/useCountdown';
+import { formatRupiah } from '@/utils/format';
+import { formatPerDayPrice, formatProjectedRange, packageDays } from '@/utils/subscription';
 
 const INFO_SECTIONS = [
   {
@@ -27,27 +30,6 @@ const INFO_SECTIONS = [
 
 const QRIS_SECS = 15 * 60;
 
-function formatPrice(n: number) {
-  return `Rp ${n.toLocaleString('id-ID')}`;
-}
-
-function perDayPrice(price: number, time: number, bonus = 0) {
-  const days = Math.round((time + bonus) / 86_400);
-  return `setara Rp ${Math.round(price / days).toLocaleString('id-ID')}/hari`;
-}
-
-function totalDaysStr(time: number, bonus = 0) {
-  return `untuk ${Math.round((time + bonus) / 86_400)} hari`;
-}
-
-function projectedRange(totalDays: number) {
-  const start = new Date();
-  const end = new Date(start.getTime() + totalDays * 86_400_000);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-  return `${fmt(start)} – ${fmt(end)}`;
-}
-
 type StoreRef = { id: string; name: string };
 
 // Default toko diambil dari summary upload terakhir (jika ada)
@@ -60,17 +42,6 @@ function getStoreFromSession(): StoreRef | null {
   } catch {
     return null;
   }
-}
-
-function useCountdown(secs: number) {
-  const [rem, setRem] = useState(secs);
-  useEffect(() => {
-    const id = setInterval(() => setRem((r) => Math.max(0, r - 1)), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const m = Math.floor(rem / 60).toString().padStart(2, '0');
-  const s = (rem % 60).toString().padStart(2, '0');
-  return { str: `${m}:${s}`, m, s };
 }
 
 type PollStatus = 'polling' | 'paid' | 'expired';
@@ -94,7 +65,7 @@ function QrisView({
 }) {
   const { str: countdownStr, m, s } = useCountdown(QRIS_SECS);
   const pkg = dataPrice[pkgIdx];
-  const totalDays = pkg ? Math.round((pkg.time + (pkg.bonus ?? 0)) / 86_400) : 0;
+  const totalDays = pkg ? packageDays(pkg.time, pkg.bonus) : 0;
 
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -215,7 +186,7 @@ function QrisView({
                 <span>Untuk toko: {storeName || 'Toko Anda'}</span>
               </div>
               <p className="text-white/70 text-base font-medium">Paket {pkg?.name}</p>
-              <p className="text-white font-bold text-4xl mt-0.5">{pkg ? formatPrice(pkg.price) : ''}</p>
+              <p className="text-white font-bold text-4xl mt-0.5">{pkg ? formatRupiah(pkg.price) : ''}</p>
             </div>
 
             {/* QRIS card */}
@@ -268,13 +239,13 @@ function QrisView({
                 <div className="py-4 border-b border-white/10 flex items-start justify-between">
                   <div>
                     <p className="font-semibold">Paket {pkg?.name}</p>
-                    <p className="text-xs text-white/50 mt-0.5">{projectedRange(totalDays)}</p>
+                    <p className="text-xs text-white/50 mt-0.5">{formatProjectedRange(totalDays)}</p>
                   </div>
-                  <p className="font-semibold">{pkg ? formatPrice(pkg.price) : ''}</p>
+                  <p className="font-semibold">{pkg ? formatRupiah(pkg.price) : ''}</p>
                 </div>
                 <div className="pt-4 flex items-center justify-between">
                   <p className="text-sm text-white/60">Total bayar</p>
-                  <p className="text-xl font-bold">{pkg ? formatPrice(pkg.price) : ''}</p>
+                  <p className="text-xl font-bold">{pkg ? formatRupiah(pkg.price) : ''}</p>
                 </div>
               </div>
 
@@ -546,7 +517,7 @@ export default function MembershipPage() {
       <div className="md:hidden flex flex-col gap-2 px-5">
         {dataPrice.map((p, idx) => {
           const isSelected = selectedPkg === idx;
-          const totalDays = Math.round((p.time + (p.bonus ?? 0)) / 86_400);
+          const totalDays = packageDays(p.time, p.bonus);
           return (
             <button
               key={idx}
@@ -583,14 +554,14 @@ export default function MembershipPage() {
                   )}
                 </div>
                 <p className={`text-xs mt-0.5 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
-                  {p.desc} · setara Rp {Math.round(p.price / totalDays).toLocaleString('id-ID')}/hari
+                  {p.desc} · {formatPerDayPrice(p.price, p.time, p.bonus)}
                 </p>
               </div>
 
               {/* Price + duration */}
               <div className="text-right shrink-0">
                 <p className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                  Rp {p.price.toLocaleString('id-ID')}
+                  {formatRupiah(p.price)}
                 </p>
                 <p className={`text-xs ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
                   / {totalDays} hari
@@ -635,12 +606,12 @@ export default function MembershipPage() {
                 <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
                   {p.name}
                 </p>
-                <p className="text-2xl font-bold leading-tight mb-1">{formatPrice(p.price)}</p>
+                <p className="text-2xl font-bold leading-tight mb-1">{formatRupiah(p.price)}</p>
                 <p className={`text-[11px] leading-snug ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
-                  {totalDaysStr(p.time, p.bonus)}
+                  untuk {packageDays(p.time, p.bonus)} hari
                 </p>
                 <p className={`text-[11px] leading-snug ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
-                  {perDayPrice(p.price, p.time, p.bonus)}
+                  {formatPerDayPrice(p.price, p.time, p.bonus)}
                 </p>
                 <p className={`text-xs flex-1 mt-3 ${isPopular ? 'text-indigo-100' : 'text-slate-600'}`}>
                   {p.desc}
@@ -684,7 +655,7 @@ export default function MembershipPage() {
           <span>
             {loading !== null
               ? 'Memproses...'
-              : `Lanjut bayar — ${formatPrice(dataPrice[selectedPkg]?.price ?? 0)}`}
+              : `Lanjut bayar — ${formatRupiah(dataPrice[selectedPkg]?.price ?? 0)}`}
           </span>
         </button>
       </div>

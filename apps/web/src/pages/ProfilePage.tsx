@@ -2,7 +2,8 @@ import { useLoaderData, useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import type { ProfileResponse } from "@packages/contract";
 import { routes } from "@/routes";
-import { config } from "@/config";
+import { logout } from "@/services/authApi";
+import { formatDate, formatRupiah } from "@/utils/format";
 import { User, Copy, Check, Store, LogOut, ChevronRight, GitBranch, CalendarDays, BadgeCheck, Wallet } from "lucide-react";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -17,18 +18,6 @@ const ROLE_COLOR: Record<string, string> = {
   superadmin: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
-function fmtCurrency(amount: number): string {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
-}
-
-function fmtDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(date));
-}
-
 export default function ProfilePage() {
   const profile = useLoaderData() as ProfileResponse;
   const navigate = useNavigate();
@@ -41,9 +30,8 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem(config.ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(config.USER_DATA_KEY);
+  const handleLogout = async () => {
+    await logout();
     navigate(routes.authLogin);
   };
 
@@ -117,7 +105,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-1">Saldo Komisi</p>
-              <p className="text-3xl font-extrabold text-slate-900">{fmtCurrency(profile.totalBalance)}</p>
+              <p className="text-3xl font-extrabold text-slate-900">{formatRupiah(profile.totalBalance)}</p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
               <Wallet className="w-5 h-5 text-emerald-500" />
@@ -161,7 +149,7 @@ export default function ProfilePage() {
                       )}
                       <span className="flex items-center gap-1 text-xs text-slate-400">
                         <CalendarDays className="w-3 h-3" />
-                        {fmtDate(s.createdAt)}
+                        {formatDate(s.createdAt)}
                       </span>
                     </div>
                   </div>

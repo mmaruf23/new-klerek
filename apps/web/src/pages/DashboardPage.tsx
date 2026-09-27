@@ -10,29 +10,19 @@ import {
   type StoreListData,
   type StoreStatusFilter,
 } from "@/services/adminApi";
-import type { StoreResponse } from "@packages/contract";
-import { dataPrice } from "@packages/contract";
-import { config } from "@/config";
-
-function formatDuration(time: number, bonus?: number): string {
-  const days = Math.round((time + (bonus ?? 0)) / 86_400);
-  if (days >= 365) return `${Math.round(days / 365)} Tahun`;
-  if (days >= 30) return `${Math.round(days / 30)} Bulan`;
-  return `${days} Hari`;
-}
-
-function formatPrice(amount: number): string {
-  return `Rp ${amount.toLocaleString("id-ID")}`;
-}
-
-function formatExpiresAt(subs: StoreResponse["subs"]): string {
-  const now = new Date();
-  const active = subs?.find((s) => new Date(s.expiresAt) > now);
-  if (!active) return "Tidak aktif";
-  return `Aktif hingga ${new Date(active.expiresAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`;
-}
-
-const { ACCESS_TOKEN_KEY, USER_DATA_KEY } = config;
+import { dataPrice, type StoreResponse } from "@packages/contract";
+import { getCurrentUser } from "@/lib/session";
+import { logout } from "@/services/authApi";
+import { getAvatarColor, getInitials } from "@/utils/avatar";
+import { formatDate, formatRupiah } from "@/utils/format";
+import {
+  formatActiveUntil,
+  formatExpiryRelative,
+  formatPackageDuration,
+  getActiveSub,
+  getSubLabel,
+  getSubStatus,
+} from "@/utils/subscription";
 
 const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
   { label: "Semua", value: undefined },
@@ -42,75 +32,8 @@ const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] 
 
 const STATUS_LABEL: Record<StoreStatusFilter, string> = { active: "aktif", expired: "expired" };
 
-function getUserData() {
-  try {
-    const raw = sessionStorage.getItem(USER_DATA_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as { id: string; name: string; email: string };
-  } catch {
-    return null;
-  }
-}
-
-const AVATAR_COLORS = [
-  "bg-violet-500",
-  "bg-emerald-500",
-  "bg-orange-400",
-  "bg-rose-400",
-  "bg-amber-500",
-  "bg-blue-500",
-  "bg-teal-500",
-  "bg-pink-500",
-];
-
 // dummy data for fields not yet returned by API
 const DUMMY_TX = [184, 64, 412, 0, 91, 23, 156, 307, 55, 228];
-const DUMMY_UPLOAD = [
-  "2 menit lalu",
-  "27 menit lalu",
-  "1 jam lalu",
-  "3 jam lalu",
-  "kemarin",
-  "2 hari lalu",
-  "3 hari lalu",
-  "seminggu lalu",
-  "10 menit lalu",
-  "5 jam lalu",
-];
-
-function getInitials(name: string): string {
-  return name
-    .split(/[\s—–-]+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-function getAvatarColor(id: string): string {
-  const hash = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
-
-function getSubStatus(store: StoreResponse): "aktif" | "trial" | "habis" {
-  const now = new Date();
-  const activeSub = store.subs?.find((s) => new Date(s.expiresAt) > now);
-  if (!activeSub) return "habis";
-  if (store.subs?.find((s) => s.isTrial)) return "trial";
-  return "aktif";
-}
-
-function getSubLabel(subs: StoreResponse["subs"]): string {
-  const now = new Date();
-  const activeSub = subs?.find((s) => new Date(s.expiresAt) > now);
-  if (!activeSub) return "Habis";
-  const duration = new Date(activeSub.expiresAt).getTime() - new Date(activeSub.createdAt).getTime();
-  const days = Math.round(duration / (1000 * 60 * 60 * 24));
-  if (days <= 7) return "Trial";
-  if (days <= 31) return "Bulanan";
-  if (days <= 93) return "3 Bulan";
-  if (days <= 186) return "6 Bulan";
-  return "Tahunan";
-}
 
 export default function DashboardPage() {
   const loaderData = useLoaderData() as StoreListData;
@@ -132,13 +55,12 @@ export default function DashboardPage() {
     setStores(loaderData);
     setLoadMoreError(null);
   }, [loaderData]);
-  const user = getUserData();
-  const displayName = user?.name ?? "Admin";
+  const user = getCurrentUser();
+  const displayName = user?.name || "Admin";
   const avatarInitials = getInitials(displayName);
 
-  const now = new Date();
-  const activeCount = stores.data.filter((s) => s.subs?.some((sub) => new Date(sub.expiresAt) > now)).length;
-  const trialCount = stores.data.filter((s) => getSubStatus(s) === "trial").length;
+  const activeCount = stores.data.filter((s) => getActiveSub(s.subs)).length;
+  const trialCount = stores.data.filter((s) => getSubStatus(s.subs) === "trial").length;
 
   // Subscribe modal state
   const [modalStore, setModalStore] = useState<StoreResponse | null>(null);
@@ -164,11 +86,7 @@ export default function DashboardPage() {
     setSubResult(null);
     try {
       const result = await subscribeStore(modalStore.id, selectedPkg);
-      const exp = new Date(result.subscription.expiresAt).toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
+      const exp = formatDate(result.subscription.expiresAt);
       setSubResult({ ok: true, msg: `Subscription berhasil! Aktif hingga ${exp}.` });
     } catch (err) {
       setSubResult({ ok: false, msg: err instanceof Error ? err.message : "Gagal menambah subscription" });
@@ -219,9 +137,8 @@ export default function DashboardPage() {
       setLoadingMore(false);
     }
   };
-  const handleLogout = () => {
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(USER_DATA_KEY);
+  const handleLogout = async () => {
+    await logout();
     navigate(routes.authLogin);
   };
 
@@ -334,11 +251,11 @@ export default function DashboardPage() {
         ) : (
           <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
             {stores.data.map((store, idx) => {
-              const status = getSubStatus(store);
+              const status = getSubStatus(store.subs);
               const avatarColor = getAvatarColor(store.id);
               const subLabel = getSubLabel(store.subs);
               const txCount = DUMMY_TX[idx % DUMMY_TX.length];
-              const uploadTime = DUMMY_UPLOAD[idx % DUMMY_UPLOAD.length];
+              const expiryText = formatExpiryRelative(store.subs);
 
               return (
                 <div key={store.id} className="flex items-center gap-3 px-4 py-3.5">
@@ -349,7 +266,7 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">{store.name}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {subLabel} · upload {uploadTime}
+                      {subLabel} · {expiryText}
                     </p>
                   </div>
 
@@ -413,7 +330,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              {modalStore.name} · {formatExpiresAt(modalStore.subs)}
+              {modalStore.name} · {formatActiveUntil(modalStore.subs)}
             </p>
 
             {subResult ? (
@@ -447,10 +364,10 @@ export default function DashboardPage() {
                         }`}
                       >
                         <span className={`text-sm font-medium ${selected ? "text-indigo-700" : "text-slate-700"}`}>
-                          {formatDuration(p.time, p.bonus)}
+                          {formatPackageDuration(p.time, p.bonus)}
                         </span>
                         <span className={`text-sm font-bold ${selected ? "text-indigo-600" : "text-slate-600"}`}>
-                          {formatPrice(p.price)}
+                          {formatRupiah(p.price)}
                         </span>
                       </button>
                     );
@@ -462,7 +379,7 @@ export default function DashboardPage() {
                   disabled={submitting}
                   className="w-full py-3 rounded-2xl bg-indigo-500 text-white font-semibold text-sm disabled:opacity-60 hover:bg-indigo-600 transition-colors"
                 >
-                  {submitting ? "Memproses..." : `Tambah ${formatPrice(dataPrice[selectedPkg]?.price ?? 0)}`}
+                  {submitting ? "Memproses..." : `Tambah ${formatRupiah(dataPrice[selectedPkg]?.price ?? 0)}`}
                 </button>
               </>
             )}

@@ -3,13 +3,7 @@ import { Link, useLoaderData } from "react-router-dom";
 import { routes } from "@/routes";
 import type { Summary, Data } from "@packages/contract";
 import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, X, Search } from "lucide-react";
-
-const fmt = (n: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(n);
+import { formatRupiah } from "@/utils/format";
 
 type Mode = "QRIS" | "Tunai" | "Debit";
 
@@ -137,7 +131,7 @@ export default function DetailPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-slate-400 tabular-nums w-10 shrink-0">{tx.time_tx}</span>
-                        <span className="text-base font-bold text-slate-900 tabular-nums">{fmt(tx.cash)}</span>
+                        <span className="text-base font-bold text-slate-900 tabular-nums">{formatRupiah(tx.cash)}</span>
                         {isMember && <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
                       </div>
                       <div className="flex items-center gap-2">
@@ -282,7 +276,7 @@ export default function DetailPage() {
                           <ModeBadge mode={mode} />
                         </div>
                         <span className="text-sm font-semibold text-slate-800 tabular-nums text-right">
-                          {fmt(tx.cash)}
+                          {formatRupiah(tx.cash)}
                         </span>
                       </div>
                     );
@@ -349,7 +343,7 @@ export default function DetailPage() {
                 <p className="text-xs text-slate-400 mb-1">
                   {selected.faktur.bill_no} · {selected.time_tx}
                 </p>
-                <p className="text-3xl font-extrabold text-slate-900 tabular-nums">{fmt(selected.cash)}</p>
+                <p className="text-3xl font-extrabold text-slate-900 tabular-nums">{formatRupiah(selected.cash)}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -391,7 +385,7 @@ export default function DetailPage() {
 
               <div className="border-t border-slate-100 pt-4 flex items-center justify-between">
                 <span className="text-sm text-slate-500">Total bayar</span>
-                <span className="text-sm font-bold text-slate-900 tabular-nums">{fmt(selected.cash)}</span>
+                <span className="text-sm font-bold text-slate-900 tabular-nums">{formatRupiah(selected.cash)}</span>
               </div>
             </div>
           )}

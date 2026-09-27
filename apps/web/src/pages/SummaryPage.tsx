@@ -3,24 +3,7 @@ import { routes } from "@/routes";
 import type { Summary } from "@packages/contract";
 import { ChevronRight, Download, CalendarDays, Users, Receipt, Package, Gift } from "lucide-react";
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(n);
-
-function fmtDateFull(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const day = new Intl.DateTimeFormat("id-ID", { weekday: "long" }).format(d);
-  const date = new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(d);
-  return `${date} · ${day}`;
-}
+import { formatDateWithDay, formatRupiah } from "@/utils/format";
 
 export default function SummaryPage() {
   const summary = useLoaderData() as Summary;
@@ -59,7 +42,7 @@ export default function SummaryPage() {
           {summary.branch_id && <p className="text-xl text-slate-400 font-light">{summary.branch_id}</p>}
           <div className="flex items-center gap-1.5 text-sm text-slate-400 mt-2">
             <CalendarDays className="w-4 h-4" />
-            <span>{fmtDateFull(summary.date_tx)}</span>
+            <span>{formatDateWithDay(summary.date_tx)}</span>
           </div>
         </div>
 
@@ -76,7 +59,7 @@ export default function SummaryPage() {
         {/* Total Penjualan */}
         <div className="bg-indigo-700 rounded-2xl p-5">
           <p className="text-[10px] font-bold tracking-[0.12em] text-indigo-300 uppercase mb-2">Total Penjualan</p>
-          <p className="text-3xl font-extrabold text-white tabular-nums">{fmt(totalPenjualan)}</p>
+          <p className="text-3xl font-extrabold text-white tabular-nums">{formatRupiah(totalPenjualan)}</p>
           <p className="text-sm text-indigo-300 mt-1">{totalTransaksi} transaksi</p>
         </div>
 
@@ -139,7 +122,7 @@ export default function SummaryPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Membership aktif
               </span>
-              <span className="text-sm text-slate-400">{fmtDateFull(summary.date_tx)}</span>
+              <span className="text-sm text-slate-400">{formatDateWithDay(summary.date_tx)}</span>
             </div>
             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
               {summary.store_id} {summary.store_name}
@@ -178,7 +161,7 @@ export default function SummaryPage() {
           <div className="bg-indigo-800 rounded-2xl p-5 flex flex-col justify-between min-h-35">
             <div>
               <p className="text-xs font-bold tracking-widest text-indigo-300 uppercase mb-3">Total Penjualan</p>
-              <p className="text-2xl font-extrabold text-white leading-tight tabular-nums">{fmt(totalPenjualan)}</p>
+              <p className="text-2xl font-extrabold text-white leading-tight tabular-nums">{formatRupiah(totalPenjualan)}</p>
               <p className="text-sm text-indigo-300 mt-1">{totalTransaksi} transaksi</p>
             </div>
           </div>
@@ -192,7 +175,7 @@ export default function SummaryPage() {
           <div className="bg-white rounded-2xl p-5 flex flex-col justify-between min-h-35 shadow-sm">
             <div>
               <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-3">Rata-rata</p>
-              <p className="text-2xl font-extrabold text-slate-900 tabular-nums">{fmt(avgTx)}</p>
+              <p className="text-2xl font-extrabold text-slate-900 tabular-nums">{formatRupiah(avgTx)}</p>
               <p className="text-sm text-slate-400 mt-1">per transaksi</p>
             </div>
           </div>
@@ -260,11 +243,11 @@ export default function SummaryPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Rata-rata per transaksi</span>
-              <span className="font-semibold text-slate-900">{fmt(avgTx)}</span>
+              <span className="font-semibold text-slate-900">{formatRupiah(avgTx)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Total penjualan</span>
-              <span className="font-bold text-indigo-700">{fmt(totalPenjualan)}</span>
+              <span className="font-bold text-indigo-700">{formatRupiah(totalPenjualan)}</span>
             </div>
           </div>
         </div>

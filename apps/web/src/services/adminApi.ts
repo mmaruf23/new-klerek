@@ -2,6 +2,7 @@ import { redirect } from "react-router-dom";
 import type { ApiResponse, StoreResponse } from "@packages/contract";
 import { config } from "@/config";
 import { fetchWithAuth } from "@/lib/http";
+import { clearSession } from "@/lib/session";
 import { routes } from "@/routes";
 
 export interface SubscribeResult {
@@ -9,7 +10,7 @@ export interface SubscribeResult {
   debitAmount: number;
 }
 
-export const STORE_PAGE_LIMIT = 20;
+export const STORE_PAGE_LIMIT = config.STORE_PAGE_LIMIT;
 
 export interface StoreListData {
   data: StoreResponse[];
@@ -45,7 +46,7 @@ export async function fetchStorePage({ q, status, offset = 0 }: StoreQuery): Pro
   const res = await fetchWithAuth(`/store?${params}`);
 
   if (res.status === 401) {
-    sessionStorage.removeItem(config.ACCESS_TOKEN_KEY);
+    clearSession();
     throw redirect(routes.authLogin);
   }
 

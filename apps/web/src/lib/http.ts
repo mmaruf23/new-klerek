@@ -1,7 +1,8 @@
 import { config } from "@/config";
 import type { ApiResponse, RefreshResponse } from "@packages/contract";
+import { getAccessToken, setAccessToken } from "@/lib/session";
 
-const { API_URL, ACCESS_TOKEN_KEY } = config;
+const { API_URL } = config;
 
 let refreshPromise: Promise<string | null> | null = null;
 
@@ -14,7 +15,7 @@ async function requestNewToken(): Promise<string | null> {
     if (!res.ok) return null;
     const json: ApiResponse<RefreshResponse> = await res.json();
     if (!json.success || !json.data) return null;
-    sessionStorage.setItem(ACCESS_TOKEN_KEY, json.data.token);
+    setAccessToken(json.data.token);
     return json.data.token;
   } catch {
     return null;
@@ -38,7 +39,7 @@ export async function fetchWithAuth(path: string, init: RequestInit = {}): Promi
       },
     });
 
-  const res = await doFetch(sessionStorage.getItem(ACCESS_TOKEN_KEY));
+  const res = await doFetch(getAccessToken());
   if (res.status !== 401) return res;
 
   const newToken = await refreshAccessToken();

@@ -77,6 +77,7 @@ Berisi:
 | POST | `/` | cookie (opsional) | Upload zip SQLite, return summary transaksi |
 | POST | `/auth/google` | — | Login/registrasi via Google SSO (kirim `credential` ID token) → JWT bearer (10 menit) + cookie `refresh_token` (7 hari) |
 | POST | `/auth/refresh` | cookie `refresh_token` | Terbitkan access token baru dari refresh token |
+| POST | `/auth/logout` | — | Hapus cookie `refresh_token` (refresh token stateless, tidak ada revoke di DB) |
 | GET | `/auth/me` | authMiddleware | Profil user yang sedang login + list toko referral + totalBalance |
 | GET | `/auth/balance` | authMiddleware | Riwayat balance user (credit & debit), urut terbaru |
 | GET | `/store` | authMiddleware | List store + pagination meta. Role `user` hanya toko referral sendiri; admin/superadmin semua. Query: `q` (nama, ilike), `status` (`active`\|`expired`) |
@@ -315,6 +316,7 @@ src/
 │   └── ui/                  → shadcn components (tambah: `pnpm dlx shadcn@latest add <komponen>`)
 ├── hooks/
 │   ├── useUpload.ts          → Upload file, navigate ke /summary setelah sukses
+│   ├── useCountdown.ts       → Hitung mundur per detik ("mm:ss"), dipakai countdown QRIS
 │   └── useGoogleLogin.ts     → Login Google, simpan token ke sessionStorage
 ├── services/
 │   ├── authApi.ts            → loginWithGoogle(), fetchProfile()
@@ -323,7 +325,12 @@ src/
 ├── lib/
 │   ├── authGuard.ts          → Middleware react-router: requireAuth, requireAdmin, redirectIfAuthenticated (dengan silent refresh)
 │   ├── http.ts               → fetchWithAuth(): bearer + auto-refresh saat 401 (deduped, retry sekali)
+│   ├── session.ts            → Satu-satunya akses sessionStorage auth: getCurrentUser() (dari claims JWT), getClaims(), set/clear session
 │   └── utils.ts              → cn() utility
+├── utils/                    → Helper murni (tanpa React) yang reusable — JANGAN definisikan ulang di page
+│   ├── format.ts             → formatRupiah(), formatDate(date, "long"|"short"), formatDateWithDay(), timeAgo() (dua arah)
+│   ├── avatar.ts             → getInitials(), getAvatarColor(id)
+│   └── subscription.ts       → paket (packageDays, formatPackageDuration, formatPerDayPrice, formatProjectedRange) + status subs toko (getActiveSub, getSubStatus, getSubLabel, formatActiveUntil, formatExpiryRelative)
 ├── config.ts                 → Config dari env vars (API_URL, ACCESS_TOKEN_KEY, dll)
 └── router.tsx                → Router + export `routes` object
 ```
@@ -366,10 +373,13 @@ export const routes = {
 `lib/authGuard.ts` menyediakan middleware react-router:
 - `requireAuthMiddleware` — cek ada token + `role` claim, redirect ke `/auth/login` jika tidak ada
 - `requireAdminMiddleware` — cek role `admin` atau `superadmin`
+- `requireSuperadminMiddleware` — cek role `superadmin` (redirect ke dashboard jika bukan); dipakai `/admin/users`
 - `requireUserMiddleware` — cek role `user`
 - `redirectIfAuthenticatedMiddleware` — redirect ke `/` jika sudah login
 
-Token disimpan di `sessionStorage` dengan key dari `config.ACCESS_TOKEN_KEY`.
+Token disimpan di `sessionStorage` dengan key dari `config.ACCESS_TOKEN_KEY`. Data user (id, name, role) dibaca dari claims token lewat `getCurrentUser()` di `lib/session.ts` — tidak ada penyimpanan data user terpisah.
+
+Logout **wajib** lewat `logout()` di `services/authApi.ts` (panggil `POST /auth/logout` lalu `clearSession()`). Menghapus sessionStorage saja tidak cukup: cookie `refresh_token` masih ada, sehingga auth guard akan silent-refresh dan user login lagi.
 
 ### Konfigurasi
 
