@@ -79,7 +79,7 @@ Berisi:
 | POST | `/auth/refresh` | cookie `refresh_token` | Terbitkan access token baru dari refresh token |
 | GET | `/auth/me` | authMiddleware | Profil user yang sedang login + list toko referral + totalBalance |
 | GET | `/auth/balance` | authMiddleware | Riwayat balance user (credit & debit), urut terbaru |
-| GET | `/store` | authMiddleware | List semua store + pagination meta |
+| GET | `/store` | authMiddleware | List store + pagination meta. Role `user` hanya toko referral sendiri; admin/superadmin semua. Query: `q` (nama, ilike), `status` (`active`\|`expired`) |
 | GET | `/store/:id` | authMiddleware | Detail store + subscription aktif |
 | POST | `/store/:id/subscribe` | authMiddleware | Tambah subscription toko via balance (hanya toko referral sendiri; superadmin gratis) |
 | GET | `/health` | — | API health check |

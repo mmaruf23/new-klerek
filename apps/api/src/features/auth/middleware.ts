@@ -19,14 +19,23 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
   });
 };
 
+export const adminMiddleware: MiddlewareHandler = async (c, next) => {
+  await jwtMiddleware(c, async () => {
+    const payload = c.get("jwtPayload") as JwtClaims;
+    if (!payload?.sub || payload.type === "refresh") throw Exception.Unauthorized();
+    if (payload.role !== "admin" && payload.role !== "superadmin") throw Exception.Forbidden("Akses ditolak");
+    await next();
+  });
+};
+
 export const superAdminMiddleware: MiddlewareHandler = async (c, next) => {
   await jwtMiddleware(c, async () => {
     const payload = c.get("jwtPayload") as JwtClaims;
-    if (!payload?.sub || payload.type === "refresh" || payload.role !== "superadmin")
-      throw Exception.Unauthorized();
+    if (!payload?.sub || payload.type === "refresh") throw Exception.Unauthorized();
+    if (payload.role !== "superadmin") throw Exception.Forbidden("Akses ditolak");
     await next();
   });
-}
+};
 
 export const cookieMiddleware: MiddlewareHandler = async (c, next) => {
   const token = getCookie(c, config.COOKIE_TOKEN_KEY);

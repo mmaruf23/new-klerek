@@ -1,23 +1,58 @@
-import { desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, exists, gt, ilike, not, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { store, subscription, users, balance, type StoreInsert } from "../../db/schema.js";
 import { Exception } from "../../error.js";
 import type { StoreResponse } from "@packages/contract";
 import { dataPrice } from "../subscription/data.js";
 
+export type StoreStatusFilter = "active" | "expired";
+
 interface PageQuery {
   limit: number;
   offset: number;
+  search?: string;
+  status?: StoreStatusFilter;
 }
 
-export const getAllStore = async ({ limit, offset }: PageQuery) => {
-  const total = await db.$count(store);
-  if (!total) {
-    return { data: [], total, limit, offset, hasNext: false };
-  }
+interface UserIDQuery {
+  userId?: string;
+}
+
+export const getAllStore = async ({ limit, offset, search, status, userId }: UserIDQuery & PageQuery) => {
+  const empty = { data: [], total: 0, limit, offset, hasNext: false };
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId ?? ""),
+  });
+  if (!user) return empty;
+
+  // user biasa hanya melihat toko referral miliknya; admin & superadmin melihat semua
+  const isUser = user.role === "user";
+  if (isUser && !user.refferalCode) return empty;
+
+  // toko aktif = punya minimal satu subscription yang belum expired
+  const hasActiveSub = exists(
+    db
+      .select({ one: sql`1` })
+      .from(subscription)
+      .where(and(eq(subscription.storeId, store.id), gt(subscription.expiresAt, new Date()))),
+  );
+
+  const where = and(
+    search ? ilike(store.name, `%${search}%`) : undefined,
+    isUser ? eq(store.referrerId, user.refferalCode!) : undefined,
+    status === "active" ? hasActiveSub : status === "expired" ? not(hasActiveSub) : undefined,
+  );
+
+  const total = await db.$count(store, where);
+  if (!total) return empty;
+
   const stores = await db.query.store.findMany({
     limit,
     offset,
+    where,
+    // store.id sebagai tie-breaker agar offset stabil (tidak ada toko dobel/terlewat antar halaman)
+    orderBy: [desc(store.createdAt), store.id],
     with: {
       subs: { orderBy: desc(subscription.expiresAt), limit: 1 },
     },
@@ -103,7 +138,8 @@ export const addSubscriptionByBalance = async (
   const storeData = await db.query.store.findFirst({ where: eq(store.id, storeId) });
   if (!storeData) throw Exception.NotFound("store not found");
 
-  if (userRole === "user" && storeData.referrerId !== user.refferalCode) throw Exception.Forbidden("Toko ini bukan referral Anda");
+  if (userRole === "user" && storeData.referrerId !== user.refferalCode)
+    throw Exception.Forbidden("Toko ini bukan referral Anda");
 
   if (userRole !== "superadmin") {
     const currentBalance = await getUserBalance(userId);

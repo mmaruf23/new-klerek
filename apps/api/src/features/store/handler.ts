@@ -34,7 +34,11 @@ export const storeHandler = new Hono()
   .get("/", authMiddleware, async (c) => {
     const limit = Math.max(1, Number(c.req.query("limit") ?? 20) || 20);
     const offset = Math.max(0, Number(c.req.query("offset") ?? 0) || 0);
-    const { data, ...page } = await getAllStore({ limit, offset });
+    const search = c.req.query("q")?.trim() || undefined;
+    const statusQuery = c.req.query("status");
+    const status = statusQuery === "active" || statusQuery === "expired" ? statusQuery : undefined;
+    const { sub: userId } = c.get("jwtPayload") as JwtClaims;
+    const { data, ...page } = await getAllStore({ limit, offset, search, status, userId });
 
     return c.json<ApiResponse<StoreResponse[]>>({
       success: true,

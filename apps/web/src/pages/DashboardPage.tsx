@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLoaderData, useNavigate, useNavigation, useSearchParams } from "react-router-dom";
 import { routes } from "@/routes";
-import { Bell, Search, SlidersHorizontal, Plus, CheckCircle, XCircle, X } from "lucide-react";
-import { STORE_PAGE_LIMIT, subscribeStore } from "@/services/adminApi";
-import type { ApiResponse, StoreResponse } from "@packages/contract";
+import { Bell, Search, Plus, CheckCircle, XCircle, X } from "lucide-react";
+import {
+  STORE_PAGE_LIMIT,
+  fetchStorePage,
+  parseStoreStatus,
+  subscribeStore,
+  type StoreListData,
+  type StoreStatusFilter,
+} from "@/services/adminApi";
+import type { StoreResponse } from "@packages/contract";
 import { dataPrice } from "@packages/contract";
 import { config } from "@/config";
 
@@ -26,6 +33,14 @@ function formatExpiresAt(subs: StoreResponse["subs"]): string {
 }
 
 const { ACCESS_TOKEN_KEY, USER_DATA_KEY } = config;
+
+const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
+  { label: "Semua", value: undefined },
+  { label: "Aktif", value: "active" },
+  { label: "Expired", value: "expired" },
+];
+
+const STATUS_LABEL: Record<StoreStatusFilter, string> = { active: "aktif", expired: "expired" };
 
 function getUserData() {
   try {
@@ -98,13 +113,25 @@ function getSubLabel(subs: StoreResponse["subs"]): string {
 }
 
 export default function DashboardPage() {
-  const stores = useLoaderData() as { data: StoreResponse[]; page: ApiResponse["page"] };
+  const loaderData = useLoaderData() as StoreListData;
   const navigate = useNavigate();
   const navigation = useNavigation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const offset = Number(searchParams.get("offset") ?? "0");
+  const q = searchParams.get("q") ?? "";
+  const status = parseStoreStatus(searchParams.get("status"));
+  const [search, setSearch] = useState(q);
   const loading = navigation.state === "loading";
+
+  // loader memuat halaman pertama; "Lihat lebih banyak" meng-append halaman berikutnya ke state ini
+  const [stores, setStores] = useState<StoreListData>(loaderData);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setStores(loaderData);
+    setLoadMoreError(null);
+  }, [loaderData]);
   const user = getUserData();
   const displayName = user?.name ?? "Admin";
   const avatarInitials = getInitials(displayName);
@@ -150,7 +177,48 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLoadMore = () => navigate(`?offset=${offset + STORE_PAGE_LIMIT}`);
+  const applyQuery = (next: { q?: string; status?: StoreStatusFilter }) => {
+    const params: Record<string, string> = {};
+    if (next.q) params.q = next.q;
+    if (next.status) params.status = next.status;
+    setSearchParams(params);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    applyQuery({ q: search.trim(), status });
+  };
+
+  const handleClearSearch = () => {
+    setSearch("");
+    applyQuery({ status });
+  };
+
+  const handleStatusChange = (next: StoreStatusFilter | undefined) => applyQuery({ q, status: next });
+
+  const handleLoadMore = async () => {
+    const nextOffset = (stores.page?.offset ?? 0) + (stores.page?.limit ?? STORE_PAGE_LIMIT);
+
+    setLoadingMore(true);
+    setLoadMoreError(null);
+    try {
+      const next = await fetchStorePage({ q: q || undefined, status, offset: nextOffset });
+      setStores((prev) => {
+        // buang duplikat jika ada toko baru masuk di antara dua request
+        const seen = new Set(prev.data.map((s) => s.id));
+        return { data: [...prev.data, ...next.data.filter((s) => !seen.has(s.id))], page: next.page };
+      });
+    } catch (err) {
+      // fetchStorePage melempar redirect (Response 3xx) saat sesi habis
+      if (err instanceof Response && err.status >= 300 && err.status < 400) {
+        navigate(routes.authLogin);
+        return;
+      }
+      setLoadMoreError("Gagal memuat toko berikutnya. Coba lagi.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
   const handleLogout = () => {
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     sessionStorage.removeItem(USER_DATA_KEY);
@@ -200,18 +268,50 @@ export default function DashboardPage() {
       </div>
 
       {/* Search */}
-      <div className="px-5 mt-4 flex gap-2">
+      <form onSubmit={handleSearch} className="px-5 mt-4 flex gap-2">
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            className="w-full bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm outline-none"
-            placeholder="Cari toko, NIK kasir, atau ID..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white rounded-2xl pl-10 pr-10 py-3 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm outline-none"
+            placeholder="Cari nama toko..."
           />
+          {search && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        <button className="bg-white rounded-2xl px-3.5 flex items-center gap-1.5 text-sm text-slate-600 font-medium shadow-sm shrink-0">
-          <SlidersHorizontal className="w-4 h-4" />
-          Filter
+        <button
+          type="submit"
+          className="bg-indigo-500 text-white px-4 rounded-2xl text-sm font-semibold hover:bg-indigo-600 transition-colors shrink-0"
+        >
+          Cari
         </button>
+      </form>
+
+      {/* Filter status */}
+      <div className="px-5 mt-3 flex gap-2">
+        {STATUS_FILTERS.map((f) => {
+          const selected = status === f.value;
+          return (
+            <button
+              key={f.label}
+              type="button"
+              onClick={() => handleStatusChange(f.value)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                selected ? "bg-slate-900 text-white" : "bg-white text-slate-500 shadow-sm hover:bg-slate-50"
+              }`}
+            >
+              {f.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Aktivitas Terbaru */}
@@ -225,7 +325,11 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl py-10 text-center text-sm text-slate-400 shadow-sm">Memuat...</div>
         ) : stores.data.length === 0 ? (
           <div className="bg-white rounded-2xl py-10 text-center text-sm text-slate-400 shadow-sm">
-            Belum ada toko terdaftar.
+            {q
+              ? `Tidak ada toko${status ? ` ${STATUS_LABEL[status]}` : ""} untuk "${q}"`
+              : status
+                ? `Tidak ada toko ${STATUS_LABEL[status]}.`
+                : "Belum ada toko terdaftar."}
           </div>
         ) : (
           <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
@@ -286,13 +390,15 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {stores.page?.hasNext && (
+        {loadMoreError && <p className="mt-3 text-xs text-center text-red-500">{loadMoreError}</p>}
+
+        {!loading && stores.page?.hasNext && (
           <button
             onClick={handleLoadMore}
-            disabled={loading}
+            disabled={loadingMore}
             className="w-full mt-3 py-3 text-sm text-indigo-500 font-medium text-center disabled:opacity-50"
           >
-            Lihat lebih banyak
+            {loadingMore ? "Memuat..." : "Lihat lebih banyak"}
           </button>
         )}
       </div>

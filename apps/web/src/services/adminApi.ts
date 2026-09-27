@@ -16,11 +16,33 @@ export interface StoreListData {
   page: ApiResponse["page"];
 }
 
+export type StoreStatusFilter = "active" | "expired";
+
+export interface StoreQuery {
+  q?: string;
+  status?: StoreStatusFilter;
+  offset?: number;
+}
+
+export function parseStoreStatus(value: string | null): StoreStatusFilter | undefined {
+  return value === "active" || value === "expired" ? value : undefined;
+}
+
+// loader: selalu mulai dari halaman pertama, halaman berikutnya di-append lewat fetchStorePage
 export async function fetchStores(request: Request): Promise<StoreListData> {
   const url = new URL(request.url);
-  const offset = Number(url.searchParams.get("offset") ?? "0");
+  return fetchStorePage({
+    q: url.searchParams.get("q") ?? undefined,
+    status: parseStoreStatus(url.searchParams.get("status")),
+  });
+}
 
-  const res = await fetchWithAuth(`/store?limit=${STORE_PAGE_LIMIT}&offset=${offset}`);
+export async function fetchStorePage({ q, status, offset = 0 }: StoreQuery): Promise<StoreListData> {
+  const params = new URLSearchParams({ limit: String(STORE_PAGE_LIMIT), offset: String(offset) });
+  if (q) params.set("q", q);
+  if (status) params.set("status", status);
+
+  const res = await fetchWithAuth(`/store?${params}`);
 
   if (res.status === 401) {
     sessionStorage.removeItem(config.ACCESS_TOKEN_KEY);

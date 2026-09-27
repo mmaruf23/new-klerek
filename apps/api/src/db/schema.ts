@@ -134,6 +134,8 @@ export const balanceRelations = relations(balance, ({ one }) => ({
 export type User = InferSelectModel<typeof users>;
 export type UserInsert = InferInsertModel<typeof users>;
 
+export type EnumRole = User["role"];
+
 export type Balance = InferSelectModel<typeof balance>;
 export type BalanceInsert = InferInsertModel<typeof balance>;
 
