@@ -1,4 +1,4 @@
-import { and, desc, eq, exists, gt, ilike, not, sql } from "drizzle-orm";
+import { and, desc, eq, exists, gt, ilike, not, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { store, subscription, users, balance, type StoreInsert } from "../../db/schema.js";
 import { Exception } from "../../error.js";
@@ -39,7 +39,7 @@ export const getAllStore = async ({ limit, offset, search, status, userId }: Use
   );
 
   const where = and(
-    search ? ilike(store.name, `%${search}%`) : undefined,
+    search ? or(ilike(store.name, `%${search}%`), eq(store.id, search)) : undefined,
     isUser ? eq(store.referrerId, user.refferalCode!) : undefined,
     status === "active" ? hasActiveSub : status === "expired" ? not(hasActiveSub) : undefined,
   );

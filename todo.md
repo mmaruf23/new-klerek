@@ -3,7 +3,7 @@
 ## Project
 - [x] Migrasiin database ke neon.
 - [x] integrasi database neon ke old project.
-- [ ] migrasi fitur pembayaran dari wijayapay ke saweria backend.
+- [x] migrasi fitur pembayaran dari wijayapay ke saweria backend.
 
 ## Feature
 - [x] simpan rekap transaksi ke db make sure jangan duplikat
