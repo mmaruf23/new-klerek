@@ -3,6 +3,7 @@ import type { JwtClaims } from "@packages/contract";
 import { refreshAccessToken } from "@/lib/http";
 import { getClaims } from "@/lib/session";
 import { routes } from "@/routes";
+import { config } from "@/config";
 
 async function getClaimsOrRefresh(): Promise<JwtClaims | null> {
   const claims = getClaims();
@@ -14,6 +15,8 @@ async function getClaimsOrRefresh(): Promise<JwtClaims | null> {
 }
 
 export const requireAuthMiddleware: MiddlewareFunction = async (_, next) => {
+  if (config.ENV == 'development') return next();
+  console.log("redirected")
   const claims = await getClaimsOrRefresh();
   if (!claims) return redirect(routes.authLogin);
 

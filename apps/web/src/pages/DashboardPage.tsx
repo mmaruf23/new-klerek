@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useLoaderData, useNavigate, useNavigation, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { routes } from "@/routes";
 import { Bell, Search, Plus, CheckCircle, XCircle, X } from "lucide-react";
 import {
@@ -23,6 +23,7 @@ import {
   getSubLabel,
   getSubStatus,
 } from "@/utils/subscription";
+import { config } from "@/config";
 
 const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
   { label: "Semua", value: undefined },
@@ -31,30 +32,60 @@ const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] 
 ];
 
 const STATUS_LABEL: Record<StoreStatusFilter, string> = { active: "aktif", expired: "expired" };
-
-// dummy data for fields not yet returned by API
 const DUMMY_TX = [184, 64, 412, 0, 91, 23, 156, 307, 55, 228];
 
+function SkeletonStoreItem() {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3.5 animate-pulse">
+      <div className="w-16 h-11 bg-slate-200 rounded-xl shrink-0" />
+      <div className="flex-1 space-y-2 min-w-0">
+        <div className="h-4 bg-slate-200 rounded w-1/3" />
+        <div className="h-3 bg-slate-100 rounded w-1/2" />
+      </div>
+      <div className="space-y-1 text-right shrink-0">
+        <div className="h-4 bg-slate-200 rounded w-12 ml-auto" />
+        <div className="h-3 bg-slate-100 rounded w-8 ml-auto" />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
-  const loaderData = useLoaderData() as StoreListData;
   const navigate = useNavigate();
-  const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const q = searchParams.get("q") ?? "";
   const status = parseStoreStatus(searchParams.get("status"));
   const [search, setSearch] = useState(q);
-  const loading = navigation.state === "loading";
 
-  // loader memuat halaman pertama; "Lihat lebih banyak" meng-append halaman berikutnya ke state ini
-  const [stores, setStores] = useState<StoreListData>(loaderData);
+  const [stores, setStores] = useState<StoreListData>({ data: [], page: undefined });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
 
+  const loadInitialData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchStorePage({ q: q || undefined, status, offset: 0 });
+      setStores(res);
+    } catch (err) {
+      if (err instanceof Response && err.status >= 300 && err.status < 400) {
+        if (config.ENV == 'production') navigate(routes.authLogin);
+        return;
+      }
+      setError("Gagal memuat data toko.");
+    } finally {
+      setLoading(false);
+    }
+  }, [q, status, navigate]);
+
   useEffect(() => {
-    setStores(loaderData);
-    setLoadMoreError(null);
-  }, [loaderData]);
+    setSearch(q);
+    loadInitialData();
+  }, [q, status, loadInitialData]);
+
   const user = getCurrentUser();
   const displayName = user?.name || "Admin";
   const avatarInitials = getInitials(displayName);
@@ -62,7 +93,6 @@ export default function DashboardPage() {
   const activeCount = stores.data.filter((s) => getActiveSub(s.subs)).length;
   const trialCount = stores.data.filter((s) => getSubStatus(s.subs) === "trial").length;
 
-  // Subscribe modal state
   const [modalStore, setModalStore] = useState<StoreResponse | null>(null);
   const [selectedPkg, setSelectedPkg] = useState(3);
   const [submitting, setSubmitting] = useState(false);
@@ -81,7 +111,6 @@ export default function DashboardPage() {
 
   const handleSubscribe = async () => {
     if (!modalStore) return;
-
     setSubmitting(true);
     setSubResult(null);
     try {
@@ -116,18 +145,15 @@ export default function DashboardPage() {
 
   const handleLoadMore = async () => {
     const nextOffset = (stores.page?.offset ?? 0) + (stores.page?.limit ?? STORE_PAGE_LIMIT);
-
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
       const next = await fetchStorePage({ q: q || undefined, status, offset: nextOffset });
       setStores((prev) => {
-        // buang duplikat jika ada toko baru masuk di antara dua request
         const seen = new Set(prev.data.map((s) => s.id));
         return { data: [...prev.data, ...next.data.filter((s) => !seen.has(s.id))], page: next.page };
       });
     } catch (err) {
-      // fetchStorePage melempar redirect (Response 3xx) saat sesi habis
       if (err instanceof Response && err.status >= 300 && err.status < 400) {
         navigate(routes.authLogin);
         return;
@@ -137,6 +163,7 @@ export default function DashboardPage() {
       setLoadingMore(false);
     }
   };
+
   const handleLogout = async () => {
     await logout();
     navigate(routes.authLogin);
@@ -144,7 +171,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* Header */}
       <div className="px-5 pt-12 pb-4 flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500">Selamat pagi,</p>
@@ -165,8 +191,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats cards */}
-      <div className="px-5 flex gap-3 pb-1 outline">
+      <div className="px-5 flex gap-3 pb-1">
         <div className="flex-1 bg-indigo-500 rounded-2xl p-4 text-white">
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-75">Toko Aktif</p>
           <p className="text-3xl font-bold mt-1">{activeCount}</p>
@@ -177,14 +202,8 @@ export default function DashboardPage() {
           <p className="text-3xl font-bold mt-1">{trialCount}</p>
           <p className="text-xs opacity-70 mt-1">0 segera habis</p>
         </div>
-        {/* <div className="shrink-0 w-35 bg-white rounded-2xl p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Pendapatan</p>
-          <p className="text-2xl font-bold mt-1 text-slate-900">Rp 4.2jt</p>
-          <p className="text-xs text-slate-400 mt-1">30 hari</p>
-        </div> */}
       </div>
 
-      {/* Search */}
       <form onSubmit={handleSearch} className="px-5 mt-4 flex gap-2">
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -212,7 +231,6 @@ export default function DashboardPage() {
         </button>
       </form>
 
-      {/* Filter status */}
       <div className="px-5 mt-3 flex gap-2">
         {STATUS_FILTERS.map((f) => {
           const selected = status === f.value;
@@ -231,15 +249,20 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Aktivitas Terbaru */}
       <div className="px-5 mt-6 pb-28">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Aktivitas Terbaru</h2>
           <button className="text-xs text-indigo-500 font-medium">Lihat semua</button>
         </div>
 
-        {loading ? (
-          <div className="bg-white rounded-2xl py-10 text-center text-sm text-slate-400 shadow-sm">Memuat...</div>
+        {error ? (
+          <div className="bg-white rounded-2xl py-8 text-center text-sm text-red-500 shadow-sm px-4">{error}</div>
+        ) : loading && stores.data.length === 0 ? (
+          <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonStoreItem key={i} />
+            ))}
+          </div>
         ) : stores.data.length === 0 ? (
           <div className="bg-white rounded-2xl py-10 text-center text-sm text-slate-400 shadow-sm">
             {q
@@ -251,7 +274,7 @@ export default function DashboardPage() {
         ) : (
           <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
             {stores.data.map((store, idx) => {
-              const status = getSubStatus(store.subs);
+              const subStatus = getSubStatus(store.subs);
               const avatarColor = getAvatarColor(store.id);
               const subLabel = getSubLabel(store.subs);
               const txCount = DUMMY_TX[idx % DUMMY_TX.length];
@@ -275,19 +298,23 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-1.5">
                         <span
                           className={`w-2 h-2 rounded-full ${
-                            status === "aktif" ? "bg-emerald-400" : status === "trial" ? "bg-blue-400" : "bg-red-400"
+                            subStatus === "aktif"
+                              ? "bg-emerald-400"
+                              : subStatus === "trial"
+                                ? "bg-blue-400"
+                                : "bg-red-400"
                           }`}
                         />
                         <span
                           className={`text-xs font-medium ${
-                            status === "aktif"
+                            subStatus === "aktif"
                               ? "text-emerald-600"
-                              : status === "trial"
+                              : subStatus === "trial"
                                 ? "text-blue-600"
                                 : "text-red-500"
                           }`}
                         >
-                          {status === "aktif" ? "Aktif" : status === "trial" ? "Trial" : "Habis"}
+                          {subStatus === "aktif" ? "Aktif" : subStatus === "trial" ? "Trial" : "Habis"}
                         </span>
                       </div>
                       <span className="text-xs text-slate-400 mt-0.5">{txCount} tx</span>
@@ -319,7 +346,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Subscribe Modal */}
       {modalStore && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl">

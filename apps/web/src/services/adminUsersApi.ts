@@ -6,17 +6,13 @@ export interface UsersListData {
   page: ApiResponse["page"];
 }
 
-export async function fetchUsers(request: Request): Promise<UsersListData> {
-  const url = new URL(request.url);
-  const offset = Number(url.searchParams.get("offset") ?? "0");
-  const q = url.searchParams.get("q") ?? "";
-
+export async function fetchUsers(offset = 0, q = ""): Promise<UsersListData> {
   const params = new URLSearchParams({ limit: "20", offset: String(offset) });
   if (q) params.set("q", q);
 
   const res = await fetchWithAuth(`/admin/users?${params}`);
   const json: ApiResponse<AdminUserItem[]> = await res.json();
-  if (!json.success || !json.data) throw new Response(json.message ?? "Gagal memuat data", { status: 500 });
+  if (!json.success || !json.data) throw new Error(json.message ?? "Gagal memuat data");
 
   return { data: json.data, page: json.page };
 }
@@ -28,10 +24,7 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail> 
   return json.data;
 }
 
-export async function updateUserRole(
-  userId: string,
-  role: "admin" | "user",
-): Promise<void> {
+export async function updateUserRole(userId: string, role: "admin" | "user"): Promise<void> {
   const res = await fetchWithAuth(`/admin/users/${userId}/role`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

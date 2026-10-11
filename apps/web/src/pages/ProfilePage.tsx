@@ -1,10 +1,21 @@
-import { useLoaderData, useNavigate, Link } from "react-router-dom";
-import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import type { ProfileResponse } from "@packages/contract";
 import { routes } from "@/routes";
-import { logout } from "@/services/authApi";
+import { logout, fetchProfile } from "@/services/authApi";
 import { formatDate, formatRupiah } from "@/utils/format";
-import { User, Copy, Check, Store, LogOut, ChevronRight, GitBranch, CalendarDays, BadgeCheck, Wallet } from "lucide-react";
+import {
+  User,
+  Copy,
+  Check,
+  Store,
+  LogOut,
+  ChevronRight,
+  GitBranch,
+  CalendarDays,
+  BadgeCheck,
+  Wallet,
+} from "lucide-react";
 
 const ROLE_LABEL: Record<string, string> = {
   user: "Pengguna",
@@ -19,12 +30,27 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const profile = useLoaderData() as ProfileResponse;
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    fetchProfile()
+      .then((data) => setProfile(data))
+      .catch((err) => {
+        if (err instanceof Response && err.status >= 300 && err.status < 400) {
+          navigate(routes.authLogin);
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Gagal memuat profil");
+      })
+      .finally(() => setLoading(false));
+  }, [navigate]);
+
   const handleCopy = () => {
-    if (!profile.referralCode) return;
+    if (!profile?.referralCode) return;
     navigator.clipboard.writeText(profile.referralCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -35,9 +61,27 @@ export default function ProfilePage() {
     navigate(routes.authLogin);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#EDF0F8] flex items-center justify-center">
+        <p className="text-sm text-slate-400 animate-pulse">Memuat profil...</p>
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-[#EDF0F8] flex flex-col items-center justify-center p-4">
+        <p className="text-sm text-red-500 mb-2">{error ?? "Profil tidak ditemukan"}</p>
+        <button onClick={() => navigate(routes.home)} className="text-xs text-indigo-600 font-semibold underline">
+          Kembali ke Beranda
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#EDF0F8]">
-      {/* Top bar */}
       <header className="bg-white shadow-sm h-14 flex items-center justify-between px-6">
         <Link to={routes.home} className="flex items-center gap-2">
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -55,12 +99,16 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-5 py-10 space-y-5">
-        {/* Profile card */}
         <div className="bg-white rounded-3xl p-7 shadow-sm">
           <div className="flex items-start gap-5">
             <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0 overflow-hidden">
               {profile.avatarUrl ? (
-                <img src={profile.avatarUrl} alt={profile.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.name}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <User className="w-7 h-7 text-indigo-500" strokeWidth={2} />
               )}
@@ -79,7 +127,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Referral code */}
           {profile.referralCode && (
             <div className="mt-6 pt-6 border-t border-slate-100">
               <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3">Kode Referral</p>
@@ -100,7 +147,6 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Balance */}
         <div className="bg-white rounded-3xl p-7 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -113,7 +159,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Referred stores */}
         <div className="bg-white rounded-3xl p-7 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div>

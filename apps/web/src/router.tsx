@@ -1,5 +1,4 @@
-import { createBrowserRouter, redirect, type LoaderFunctionArgs } from "react-router-dom";
-import type { Summary } from "@packages/contract";
+import { createBrowserRouter } from "react-router-dom";
 import HomePage from "@/pages/HomePage";
 import SummaryPage from "@/pages/SummaryPage";
 import DetailPage from "@/pages/DetailPage";
@@ -12,25 +11,8 @@ import UsersPage from "./pages/admin/UsersPage";
 import Layout from "./components/layout/Layout";
 import ContactPage from "./pages/ContactPage";
 import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware, requireSuperadminMiddleware } from "@/lib/authGuard";
-import { fetchStores } from "./services/adminApi";
-import { fetchUsers } from "./services/adminUsersApi";
-import { fetchProfile } from "./services/authApi";
 import { routes } from "./routes";
 import AdminLayout from "./components/layout/AdminLayout";
-
-function summaryLoader(): Summary {
-  const raw = sessionStorage.getItem("klerek_summary");
-  if (!raw) throw redirect(routes.home);
-  return JSON.parse(raw) as Summary;
-}
-
-function storeLoader({ request }: LoaderFunctionArgs) {
-  return fetchStores(request);
-}
-
-function profileLoader() {
-  return fetchProfile();
-}
 
 export const router = createBrowserRouter([
   {
@@ -38,8 +20,8 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: routes.summary, loader: summaryLoader, element: <SummaryPage /> },
-      { path: routes.detail, loader: summaryLoader, element: <DetailPage /> },
+      { path: routes.summary, element: <SummaryPage /> },
+      { path: routes.detail, element: <DetailPage /> },
       { path: routes.membership, element: <MembershipPage /> },
       { path: routes.contact, element: <ContactPage /> },
       { path: routes.refer, element: <ReferPage /> },
@@ -49,9 +31,9 @@ export const router = createBrowserRouter([
     path: routes.home,
     element: <AdminLayout />,
     children: [
-      { path: routes.dashboard, middleware: [requireAuthMiddleware], loader: storeLoader, element: <DashboardPage /> },
-      { path: routes.profile, middleware: [requireAuthMiddleware], loader: profileLoader, element: <ProfilePage /> },
-      { path: routes.adminUsers, middleware: [requireSuperadminMiddleware], loader: ({ request }: LoaderFunctionArgs) => fetchUsers(request), element: <UsersPage /> },
+      { path: routes.dashboard, middleware: [requireAuthMiddleware], element: <DashboardPage /> },
+      { path: routes.profile, middleware: [requireAuthMiddleware], element: <ProfilePage /> },
+      { path: routes.adminUsers, middleware: [requireSuperadminMiddleware], element: <UsersPage /> },
     ],
   },
   {

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link, useLoaderData } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { routes } from "@/routes";
 import type { Summary, Data } from "@packages/contract";
 import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, X, Search } from "lucide-react";
@@ -7,7 +7,6 @@ import { formatRupiah } from "@/utils/format";
 
 type Mode = "QRIS" | "Tunai" | "Debit";
 
-// Deterministic mock — payment mode not available from API
 function mockMode(billNo: string): Mode {
   const hash = billNo.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   return (["QRIS", "Tunai", "Debit"] as Mode[])[hash % 3];
@@ -32,22 +31,34 @@ const MOBILE_PAGE_SIZE = 10;
 type FilterTab = "semua" | "member" | "qris" | "tunai";
 
 export default function DetailPage() {
-  const summary = useLoaderData() as Summary;
+  const navigate = useNavigate();
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Shared state
+  useEffect(() => {
+    const raw = sessionStorage.getItem("klerek_summary");
+    if (!raw) {
+      navigate(routes.home);
+      return;
+    }
+    try {
+      setSummary(JSON.parse(raw) as Summary);
+    } catch {
+      navigate(routes.home);
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("semua");
-
-  // Desktop state
   const [selected, setSelected] = useState<Data | null>(null);
   const [desktopPage, setDesktopPage] = useState(1);
-
-  // Mobile state
   const [expandedBill, setExpandedBill] = useState<string | null>(null);
   const [mobileLimit, setMobileLimit] = useState(MOBILE_PAGE_SIZE);
-  // const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   const filtered = useMemo(() => {
+    if (!summary) return [];
     return summary.data.filter((tx) => {
       if (search) {
         const q = search.toLowerCase();
@@ -59,7 +70,15 @@ export default function DetailPage() {
       if (filter === "tunai") return mockMode(tx.faktur.bill_no) === "Tunai";
       return true;
     });
-  }, [summary.data, search, filter]);
+  }, [summary, search, filter]);
+
+  if (loading || !summary) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <p className="text-sm text-slate-400 animate-pulse">Memuat detail transaksi...</p>
+      </div>
+    );
+  }
 
   const handleFilterChange = (f: FilterTab) => {
     setFilter(f);
@@ -69,11 +88,8 @@ export default function DetailPage() {
     setMobileLimit(MOBILE_PAGE_SIZE);
   };
 
-  // Desktop pagination
   const totalDesktopPages = Math.ceil(filtered.length / DESKTOP_PAGE_SIZE);
   const desktopRows = filtered.slice((desktopPage - 1) * DESKTOP_PAGE_SIZE, desktopPage * DESKTOP_PAGE_SIZE);
-
-  // Mobile items
   const mobileRows = filtered.slice(0, mobileLimit);
   const hasMore = mobileLimit < filtered.length;
 
@@ -86,9 +102,7 @@ export default function DetailPage() {
 
   return (
     <>
-      {/* ── Mobile content ── */}
       <div className="md:hidden flex-1 px-4 pt-5 pb-28 space-y-4">
-        {/* Title */}
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{summary.data.length} transaksi</h1>
           <p className="text-sm text-slate-400 mt-1">
@@ -96,7 +110,6 @@ export default function DetailPage() {
           </p>
         </div>
 
-        {/* Filter pills (horizontal scroll) */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
           {FILTERS.map((f) => (
             <button
@@ -111,7 +124,6 @@ export default function DetailPage() {
           ))}
         </div>
 
-        {/* Accordion cards */}
         <div className="space-y-2">
           {mobileRows.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">Tidak ada transaksi.</p>
@@ -153,7 +165,6 @@ export default function DetailPage() {
                       {tx.items.map((item, i) => (
                         <div key={i} className="flex items-center justify-between text-sm">
                           <span className="text-slate-700">× PLU {item.plu}</span>
-                          {/* Item price not available — only total cash per transaction */}
                           <span className="text-slate-400">×{item.qty}</span>
                         </div>
                       ))}
@@ -170,7 +181,6 @@ export default function DetailPage() {
           )}
         </div>
 
-        {/* Load more */}
         <div className="text-center pt-2">
           <p className="text-xs text-slate-400 mb-3">
             ↑ menampilkan {Math.min(mobileLimit, filtered.length)} dari {filtered.length} transaksi
@@ -186,9 +196,7 @@ export default function DetailPage() {
         </div>
       </div>
 
-      {/* ── Desktop content ── */}
       <main className="hidden md:flex flex-col flex-1 max-w-7xl w-full mx-auto px-8 py-7">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-sm text-slate-400 mb-5">
           <Link to={routes.summary} className="hover:text-slate-700 transition-colors">
             Rekap
@@ -197,16 +205,13 @@ export default function DetailPage() {
           <span className="text-slate-700 font-medium">Detail Transaksi</span>
         </div>
 
-        {/* Title */}
         <div className="flex items-baseline gap-3 mb-5">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{summary.data.length} transaksi</h1>
           <span className="text-slate-400 text-base">{summary.date_tx}</span>
         </div>
 
         <div className="flex gap-5 flex-1 min-h-0">
-          {/* Table side */}
           <div className="flex-1 min-w-0 flex flex-col">
-            {/* Search + filter */}
             <div className="flex items-center gap-3 mb-4">
               <div className="relative flex-1 max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -236,7 +241,6 @@ export default function DetailPage() {
               </div>
             </div>
 
-            {/* Table */}
             <div className="flex-1 border border-slate-100 rounded-xl overflow-hidden">
               <div className="grid grid-cols-[80px_110px_1fr_80px_90px_100px] gap-3 px-5 py-3 bg-slate-50 border-b border-slate-100">
                 {["WAKTU", "ID", "KASIR", "ITEMS", "MODE", "TOTAL"].map((col) => (
@@ -285,7 +289,6 @@ export default function DetailPage() {
               </div>
             </div>
 
-            {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <span className="text-xs text-slate-400">
                 Menampilkan {Math.min((desktopPage - 1) * DESKTOP_PAGE_SIZE + 1, filtered.length)}–
@@ -326,7 +329,6 @@ export default function DetailPage() {
             </div>
           </div>
 
-          {/* Detail panel */}
           {selected && (
             <div className="w-72 shrink-0 border border-slate-100 rounded-xl p-5 space-y-5 h-fit sticky top-6">
               <div className="flex items-center justify-between">
@@ -352,7 +354,6 @@ export default function DetailPage() {
                   <p className="text-sm font-medium text-slate-800">{extractKasir(selected.header)}</p>
                 </div>
                 <div>
-                  {/* NIK kasir not available from API */}
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">NIK</p>
                   <p className="text-sm text-slate-400">—</p>
                 </div>
@@ -375,7 +376,6 @@ export default function DetailPage() {
                 <div className="space-y-2">
                   {selected.items.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
-                      {/* Item names not available — API only returns PLU codes */}
                       <span className="text-slate-700">PLU {item.plu}</span>
                       <span className="text-slate-400">×{item.qty}</span>
                     </div>

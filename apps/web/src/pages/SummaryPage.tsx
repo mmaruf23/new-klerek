@@ -1,15 +1,39 @@
-import { Link, useLoaderData, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { routes } from "@/routes";
 import type { Summary } from "@packages/contract";
 import { ChevronRight, Download, CalendarDays, Users, Receipt, Package, Gift } from "lucide-react";
-
 import { formatDateWithDay, formatRupiah } from "@/utils/format";
+import { useState, useEffect } from "react";
 
 export default function SummaryPage() {
-  const summary = useLoaderData() as Summary;
   const navigate = useNavigate();
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem("klerek_summary");
+    if (!raw) {
+      navigate(routes.home);
+      return;
+    }
+    try {
+      setSummary(JSON.parse(raw) as Summary);
+    } catch {
+      navigate(routes.home);
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
 
   const filename = sessionStorage.getItem("klerek_upload_filename") ?? null;
+
+  if (loading || !summary) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <p className="text-sm text-slate-400 animate-pulse">Memuat ringkasan...</p>
+      </div>
+    );
+  }
 
   const totalPenjualan = summary.data.reduce((s, tx) => s + tx.cash, 0);
   const totalTransaksi = summary.data.length;
@@ -30,7 +54,6 @@ export default function SummaryPage() {
     <>
       {/* Mobile content */}
       <div className="md:hidden flex-1 px-5 py-5 pb-28 space-y-4">
-        {/* Store info */}
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-1">
@@ -46,7 +69,6 @@ export default function SummaryPage() {
           </div>
         </div>
 
-        {/* Referral banner */}
         <Link
           to={routes.refer}
           className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm"
@@ -56,14 +78,12 @@ export default function SummaryPage() {
           <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
         </Link>
 
-        {/* Total Penjualan */}
         <div className="bg-indigo-700 rounded-2xl p-5">
           <p className="text-[10px] font-bold tracking-[0.12em] text-indigo-300 uppercase mb-2">Total Penjualan</p>
           <p className="text-3xl font-extrabold text-white tabular-nums">{formatRupiah(totalPenjualan)}</p>
           <p className="text-sm text-indigo-300 mt-1">{totalTransaksi} transaksi</p>
         </div>
 
-        {/* 2x2 stat grid */}
         <div className="grid grid-cols-2 gap-3">
           {[
             {
@@ -99,7 +119,6 @@ export default function SummaryPage() {
 
       {/* Desktop content */}
       <main className="hidden md:flex flex-col flex-1 max-w-5xl w-full mx-auto px-8 py-8 space-y-6">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-sm text-slate-400">
           <Link to={routes.home} className="hover:text-slate-700 transition-colors">
             Upload
@@ -114,7 +133,6 @@ export default function SummaryPage() {
           <span className="text-slate-700 font-medium">Rekap</span>
         </div>
 
-        {/* Header */}
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -146,7 +164,6 @@ export default function SummaryPage() {
           </div>
         </div>
 
-        {/* Referral banner */}
         <Link
           to={routes.refer}
           className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm w-fit"
@@ -156,12 +173,13 @@ export default function SummaryPage() {
           <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
         </Link>
 
-        {/* Stat cards */}
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-indigo-800 rounded-2xl p-5 flex flex-col justify-between min-h-35">
             <div>
               <p className="text-xs font-bold tracking-widest text-indigo-300 uppercase mb-3">Total Penjualan</p>
-              <p className="text-2xl font-extrabold text-white leading-tight tabular-nums">{formatRupiah(totalPenjualan)}</p>
+              <p className="text-2xl font-extrabold text-white leading-tight tabular-nums">
+                {formatRupiah(totalPenjualan)}
+              </p>
               <p className="text-sm text-indigo-300 mt-1">{totalTransaksi} transaksi</p>
             </div>
           </div>
@@ -188,9 +206,7 @@ export default function SummaryPage() {
           </div>
         </div>
 
-        {/* Bottom row */}
         <div className="grid grid-cols-[3fr_2fr] gap-4">
-          {/* Top items */}
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-sm font-semibold text-slate-800">Top item</h2>
@@ -226,7 +242,6 @@ export default function SummaryPage() {
             )}
           </div>
 
-          {/* Placeholder: ringkasan faktur */}
           <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-slate-800">Ringkasan</h2>
             <div className="flex justify-between text-sm">
