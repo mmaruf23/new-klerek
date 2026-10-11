@@ -1,7 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { routes } from "@/routes";
-import { Bell, Search, Plus, CheckCircle, XCircle, X } from "lucide-react";
+import {
+  Bell,
+  Search,
+  Plus,
+  CheckCircle,
+  XCircle,
+  X,
+  Store as StoreIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   STORE_PAGE_LIMIT,
   fetchStorePage,
@@ -38,7 +48,7 @@ const DUMMY_TX = [184, 64, 412, 0, 91, 23, 156, 307, 55, 228];
 function SkeletonStoreItem() {
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 animate-pulse">
-      <div className="w-16 h-11 bg-slate-200 rounded-xl shrink-0" />
+      <div className="w-12 md:w-16 h-10 md:h-11 bg-slate-200 rounded-xl shrink-0" />
       <div className="flex-1 space-y-2 min-w-0">
         <div className="h-4 bg-slate-200 rounded w-1/3" />
         <div className="h-3 bg-slate-100 rounded w-1/2" />
@@ -57,19 +67,18 @@ export default function DashboardPage() {
 
   const q = searchParams.get("q") ?? "";
   const status = parseStoreStatus(searchParams.get("status"));
+  const offset = Number(searchParams.get("offset") ?? "0");
   const [search, setSearch] = useState(q);
 
   const [stores, setStores] = useState<StoreListData>({ data: [], page: undefined });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
 
-  const loadInitialData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchStorePage({ q: q || undefined, status, offset: 0 });
+      const res = await fetchStorePage({ q: q || undefined, status, offset });
       setStores(res);
     } catch (err) {
       if (err instanceof Response && err.status >= 300 && err.status < 400) {
@@ -80,12 +89,12 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [q, status, navigate]);
+  }, [q, status, offset, navigate]);
 
   useEffect(() => {
     setSearch(q);
-    loadInitialData();
-  }, [q, status, loadInitialData]);
+    loadData();
+  }, [q, status, offset, loadData]);
 
   const user = getCurrentUser();
   const displayName = user?.name || "Admin";
@@ -125,151 +134,172 @@ export default function DashboardPage() {
     }
   };
 
-  const applyQuery = (next: { q?: string; status?: StoreStatusFilter }) => {
+  const applyQuery = (next: { q?: string; status?: StoreStatusFilter; offset?: number }) => {
     const params: Record<string, string> = {};
     if (next.q) params.q = next.q;
     if (next.status) params.status = next.status;
+    if (next.offset && next.offset > 0) params.offset = String(next.offset);
     setSearchParams(params);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    applyQuery({ q: search.trim(), status });
+    applyQuery({ q: search.trim(), status, offset: 0 });
   };
 
   const handleClearSearch = () => {
     setSearch("");
-    applyQuery({ status });
+    applyQuery({ status, offset: 0 });
   };
 
-  const handleStatusChange = (next: StoreStatusFilter | undefined) => applyQuery({ q, status: next });
-
-  const handleLoadMore = async () => {
-    const nextOffset = (stores.page?.offset ?? 0) + (stores.page?.limit ?? STORE_PAGE_LIMIT);
-    setLoadingMore(true);
-    setLoadMoreError(null);
-    try {
-      const next = await fetchStorePage({ q: q || undefined, status, offset: nextOffset });
-      setStores((prev) => {
-        const seen = new Set(prev.data.map((s) => s.id));
-        return { data: [...prev.data, ...next.data.filter((s) => !seen.has(s.id))], page: next.page };
-      });
-    } catch (err) {
-      if (err instanceof Response && err.status >= 300 && err.status < 400) {
-        navigate(routes.authLogin);
-        return;
-      }
-      setLoadMoreError("Gagal memuat toko berikutnya. Coba lagi.");
-    } finally {
-      setLoadingMore(false);
-    }
+  const handleStatusChange = (next: StoreStatusFilter | undefined) => {
+    applyQuery({ q, status: next, offset: 0 });
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigate(routes.authLogin);
+  const handlePageChange = (newOffset: number) => {
+    applyQuery({ q, status, offset: newOffset });
   };
+
+  const totalItems = stores.page?.total ?? stores.data.length;
+  const limit = stores.page?.limit ?? STORE_PAGE_LIMIT;
+  const totalPages = Math.ceil(totalItems / limit) || 1;
+  const currentPage = Math.floor(offset / limit) + 1;
+
+  const startItem = totalItems === 0 ? 0 : offset + 1;
+  const endItem = Math.min(offset + stores.data.length, totalItems);
 
   return (
-    <>
-      <div className="px-5 pt-12 pb-4 flex items-start justify-between">
-        <div>
-          <p className="text-sm text-slate-500">Selamat pagi,</p>
-          <h1 className="text-2xl font-bold text-slate-900">{displayName}</h1>
-        </div>
-        <div className="flex items-center gap-2 mt-1">
-          <button className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm relative">
-            <Bell className="w-4 h-4 text-slate-500" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-400 rounded-full" />
-          </button>
-          <button
-            onClick={handleLogout}
-            className="w-9 h-9 bg-indigo-500 rounded-full flex items-center justify-center"
-            title="Keluar"
-          >
-            <span className="text-white text-xs font-bold">{avatarInitials}</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="px-5 flex gap-3 pb-1">
-        <div className="flex-1 bg-indigo-500 rounded-2xl p-4 text-white">
-          <p className="text-[10px] font-semibold uppercase tracking-widest opacity-75">Toko Aktif</p>
-          <p className="text-3xl font-bold mt-1">{activeCount}</p>
-          <p className="text-xs opacity-70 mt-1">+0 minggu ini</p>
-        </div>
-        <div className="flex-1 bg-slate-800 rounded-2xl p-4 text-white">
-          <p className="text-[10px] font-semibold uppercase tracking-widest opacity-75">Dalam Trial</p>
-          <p className="text-3xl font-bold mt-1">{trialCount}</p>
-          <p className="text-xs opacity-70 mt-1">0 segera habis</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSearch} className="px-5 mt-4 flex gap-2">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white rounded-2xl pl-10 pr-10 py-3 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm outline-none"
-            placeholder="Cari nama toko..."
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={handleClearSearch}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-4 h-4" />
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Non-scrollable Top Content */}
+      <div className="shrink-0">
+        {/* Header */}
+        <div className="px-5 md:px-8 pt-6 md:pt-8 pb-3 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-500">Selamat pagi,</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">{displayName}</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm relative hover:bg-slate-50 transition-colors">
+              <Bell className="w-4 h-4 text-slate-500" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-400 rounded-full" />
             </button>
-          )}
-        </div>
-        <button
-          type="submit"
-          className="bg-indigo-500 text-white px-4 rounded-2xl text-sm font-semibold hover:bg-indigo-600 transition-colors shrink-0"
-        >
-          Cari
-        </button>
-      </form>
-
-      <div className="px-5 mt-3 flex gap-2">
-        {STATUS_FILTERS.map((f) => {
-          const selected = status === f.value;
-          const disabled = loading && !selected
-          return (
             <button
-              key={f.label}
-              type="button"
-              disabled={disabled}
-              onClick={() => handleStatusChange(f.value)}
-              className={cn(
-                "px-4 py-1.5 rounded-full text-xs font-semibold transition-colors",
-                selected ? "bg-slate-900 text-white" : "bg-white text-slate-500 shadow-sm hover:bg-slate-50",
-                disabled && "opacity-50 cursor-not-allowed bg-slate-100 text-slate-300 shadow-none",
+              onClick={async () => {
+                await logout();
+                navigate(routes.authLogin);
+              }}
+              className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm hover:bg-indigo-600 transition-colors"
+              title="Keluar"
+            >
+              <span className="text-white text-xs font-bold">{avatarInitials}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="px-5 md:px-8 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 my-2">
+          <div className="bg-indigo-600 rounded-2xl p-4 md:p-5 text-white shadow-sm flex flex-col justify-between">
+            <div>
+              <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-indigo-200">Toko Aktif</p>
+              <p className="text-3xl md:text-4xl font-extrabold mt-2 tabular-nums">{activeCount}</p>
+            </div>
+            <p className="text-xs text-indigo-200 mt-2">+0 minggu ini</p>
+          </div>
+
+          <div className="bg-slate-900 rounded-2xl p-4 md:p-5 text-white shadow-sm flex flex-col justify-between">
+            <div>
+              <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400">Dalam Trial</p>
+              <p className="text-3xl md:text-4xl font-extrabold mt-2 tabular-nums">{trialCount}</p>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">0 segera habis</p>
+          </div>
+
+          <div className="hidden md:flex bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex-col justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Total Terdaftar</p>
+              <p className="text-4xl font-extrabold mt-2 text-slate-900 tabular-nums">{totalItems}</p>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">Semua outlet & cabang</p>
+          </div>
+        </div>
+
+        {/* Control Bar */}
+        <div className="px-5 md:px-8 mt-4 md:mt-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex gap-2 order-2 md:order-1 flex-wrap">
+            {STATUS_FILTERS.map((f) => {
+              const selected = status === f.value;
+              const disabled = loading && !selected;
+              return (
+                <button
+                  key={f.label}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleStatusChange(f.value)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-xs md:text-sm font-semibold transition-all",
+                    selected
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-white text-slate-500 border border-slate-200/80 hover:bg-slate-50",
+                    disabled && "opacity-50 cursor-not-allowed bg-slate-100 text-slate-300 shadow-none",
+                  )}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <form onSubmit={handleSearch} className="flex gap-2 order-1 md:order-2 w-full md:w-80">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-white border border-slate-200/80 rounded-xl pl-10 pr-10 py-2.5 text-sm text-slate-800 placeholder:text-slate-300 outline-none focus:border-indigo-500 transition-colors"
+                placeholder="Cari nama toko..."
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               )}
+            </div>
+            <button
+              type="submit"
+              className="bg-indigo-600 text-white px-4 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shrink-0"
             >
-              {f.label}
+              Cari
             </button>
-          );
-        })}
-      </div>
-
-      <div className="px-5 mt-6 pb-28">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Aktivitas Terbaru</h2>
-          <button className="text-xs text-indigo-500 font-medium">Lihat semua</button>
+          </form>
         </div>
 
+        <div className="px-5 md:px-8 mt-5 flex items-center justify-between mb-2">
+          <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-400">
+            Daftar Toko & Aktivitas
+          </h2>
+          <span className="text-xs text-slate-400 font-medium">Total: {totalItems} toko</span>
+        </div>
+      </div>
+
+      {/* Scrollable Table Section Only */}
+      <div className="px-5 md:px-8 flex-1 min-h-0 overflow-y-auto">
         {error ? (
-          <div className="bg-white rounded-2xl py-8 text-center text-sm text-red-500 shadow-sm px-4">{error}</div>
+          <div className="bg-white rounded-2xl py-8 text-center text-sm text-red-500 border border-slate-100 shadow-sm px-4">
+            {error}
+          </div>
         ) : loading && stores.data.length === 0 ? (
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
+          <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm divide-y divide-slate-100">
             {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonStoreItem key={i} />
             ))}
           </div>
         ) : stores.data.length === 0 ? (
-          <div className="bg-white rounded-2xl py-10 text-center text-sm text-slate-400 shadow-sm">
+          <div className="bg-white rounded-2xl py-12 text-center text-sm text-slate-400 border border-slate-100 shadow-sm">
+            <StoreIcon className="w-10 h-10 text-slate-200 mx-auto mb-2" />
             {q
               ? `Tidak ada toko${status ? ` ${STATUS_LABEL[status]}` : ""} untuk "${q}"`
               : status
@@ -277,29 +307,49 @@ export default function DashboardPage() {
                 : "Belum ada toko terdaftar."}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
-            {stores.data.map((store, idx) => {
-              const subStatus = getSubStatus(store.subs);
-              const avatarColor = getAvatarColor(store.id);
-              const subLabel = getSubLabel(store.subs);
-              const txCount = DUMMY_TX[idx % DUMMY_TX.length];
-              const expiryText = formatExpiryRelative(store.subs);
+          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+            <div className="hidden md:grid grid-cols-[100px_1fr_180px_140px_100px] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold tracking-widest text-slate-400 uppercase sticky top-0 z-10">
+              <span>ID Outlet</span>
+              <span>Nama Toko</span>
+              <span>Langganan</span>
+              <span>Status & Transaksi</span>
+              <span className="text-right">Aksi</span>
+            </div>
 
-              return (
-                <div key={store.id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className={`w-16 h-11 ${avatarColor} rounded-xl flex items-center justify-center shrink-0`}>
-                    <span className="text-white text-sm font-bold font-mono tracking-wider uppercase">{store.id}</span>
-                  </div>
+            <div className="divide-y divide-slate-100">
+              {stores.data.map((store, idx) => {
+                const subStatus = getSubStatus(store.subs);
+                const avatarColor = getAvatarColor(store.id);
+                const subLabel = getSubLabel(store.subs);
+                const txCount = DUMMY_TX[idx % DUMMY_TX.length];
+                const expiryText = formatExpiryRelative(store.subs);
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{store.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {subLabel} · {expiryText}
-                    </p>
-                  </div>
+                return (
+                  <div
+                    key={store.id}
+                    className="flex md:grid md:grid-cols-[100px_1fr_180px_140px_100px] items-center gap-3 md:gap-4 px-4 md:px-6 py-3.5 hover:bg-slate-50/70 transition-colors"
+                  >
+                    <div
+                      className={`w-14 md:w-16 h-10 ${avatarColor} rounded-xl flex items-center justify-center shrink-0`}
+                    >
+                      <span className="text-white text-xs md:text-sm font-bold font-mono tracking-wider uppercase">
+                        {store.id}
+                      </span>
+                    </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex flex-col items-end">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{store.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5 md:hidden">
+                        {subLabel} · {expiryText}
+                      </p>
+                    </div>
+
+                    <div className="hidden md:block">
+                      <p className="text-xs font-medium text-slate-700">{subLabel}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{expiryText}</p>
+                    </div>
+
+                    <div className="flex flex-col items-end md:items-start shrink-0">
                       <div className="flex items-center gap-1.5">
                         <span
                           className={`w-2 h-2 rounded-full ${
@@ -324,33 +374,54 @@ export default function DashboardPage() {
                       </div>
                       <span className="text-xs text-slate-400 mt-0.5">{txCount} tx</span>
                     </div>
-                    <button
-                      onClick={() => handleOpenModal(store)}
-                      className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center hover:bg-indigo-100 transition-colors"
-                      title="Tambah subscription"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-indigo-500" />
-                    </button>
+
+                    <div className="flex justify-end shrink-0">
+                      <button
+                        onClick={() => handleOpenModal(store)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors text-xs font-semibold"
+                        title="Tambah subscription"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span className="hidden md:inline">Langganan</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        )}
-
-        {loadMoreError && <p className="mt-3 text-xs text-center text-red-500">{loadMoreError}</p>}
-
-        {!loading && stores.page?.hasNext && (
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="w-full mt-3 py-3 text-sm text-indigo-500 font-medium text-center disabled:opacity-50"
-          >
-            {loadingMore ? "Memuat..." : "Lihat lebih banyak"}
-          </button>
         )}
       </div>
 
+      {/* Fixed Bottom Pagination Bar */}
+      {!loading && totalItems > 0 && (
+        <div className="shrink-0 px-5 md:px-8 py-3 bg-[#EDF0F8] border-t border-slate-200/60 flex items-center justify-between pb-20 md:pb-16">
+          <span className="text-xs text-slate-400">
+            Menampilkan {startItem}–{endItem} dari {totalItems} toko
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(Math.max(0, offset - limit))}
+              disabled={offset === 0 || loading}
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-semibold text-slate-700 px-2">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(offset + limit)}
+              disabled={!stores.page?.hasNext || loading}
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Subscribe */}
       {modalStore && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl">
@@ -417,6 +488,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
