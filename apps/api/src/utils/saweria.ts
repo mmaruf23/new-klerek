@@ -32,6 +32,14 @@ export interface SaweriaWebhookPayload {
   message?: string;
 }
 
+export const checkSaweria = async () => {
+  const res = await fetch(`${config.SAWERIA_BASE_URL}`, {
+    method: 'GET'
+  })
+  
+  return res.ok
+}
+
 export const createDonation = async (params: CreateDonationParams): Promise<SaweriaDonation> => {
   if (!config.SAWERIA_USER_ID) throw new Error("SAWERIA_USER_ID belum diisi");
 

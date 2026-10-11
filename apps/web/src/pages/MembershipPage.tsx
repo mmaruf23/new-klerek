@@ -99,7 +99,7 @@ function QrisView({
       )}
 
       <div className="flex items-center justify-between mt-4">
-        <p className="text-[10px] text-slate-400 font-mono truncate max-w-[140px]">
+        <p className="text-[10px] text-slate-400 font-mono truncate max-w-35">
           {payment.invoiceId}
         </p>
         <button
@@ -200,7 +200,7 @@ function QrisView({
           </div>
 
           {/* Mobile sticky CTA */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 px-5 pb-8 pt-4 bg-gradient-to-t from-[#0d1b3e] via-[#0d1b3e]/95 to-transparent">
+          <div className="md:hidden fixed bottom-0 left-0 right-0 px-5 pb-8 pt-4 bg-linear-to-t from-[#0d1b3e] via-[#0d1b3e]/95 to-transparent">
             <button
               onClick={onCheckNow}
               className="w-full py-4 rounded-2xl bg-white text-slate-900 font-semibold text-sm hover:bg-white/90 transition-colors"

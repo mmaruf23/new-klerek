@@ -29,6 +29,68 @@ const ROLE_COLOR: Record<string, string> = {
   superadmin: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
+function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#EDF0F8] animate-pulse">
+      <header className="bg-white shadow-sm h-14 flex items-center justify-between px-6">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-slate-200 rounded-lg" />
+          <div className="w-12 h-4 bg-slate-200 rounded" />
+        </div>
+        <div className="w-16 h-4 bg-slate-200 rounded" />
+      </header>
+
+      <main className="max-w-2xl mx-auto px-5 py-10 space-y-5">
+        {/* Profile Card Skeleton */}
+        <div className="bg-white rounded-3xl p-7 shadow-sm space-y-6">
+          <div className="flex items-start gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-slate-200 shrink-0" />
+            <div className="flex-1 space-y-2 py-1">
+              <div className="h-5 bg-slate-200 rounded w-1/2" />
+              <div className="h-4 bg-slate-100 rounded w-3/4" />
+            </div>
+          </div>
+          <div className="pt-6 border-t border-slate-100 space-y-3">
+            <div className="h-3 bg-slate-200 rounded w-24" />
+            <div className="h-14 bg-slate-50 rounded-2xl" />
+          </div>
+        </div>
+
+        {/* Balance Skeleton */}
+        <div className="bg-white rounded-3xl p-7 shadow-sm flex items-center justify-between">
+          <div className="space-y-2 flex-1">
+            <div className="h-3 bg-slate-200 rounded w-24" />
+            <div className="h-8 bg-slate-200 rounded w-1/3" />
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 shrink-0" />
+        </div>
+
+        {/* Referred Stores Skeleton */}
+        <div className="bg-white rounded-3xl p-7 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="h-4 bg-slate-200 rounded w-36" />
+              <div className="h-3 bg-slate-100 rounded w-16" />
+            </div>
+            <div className="w-5 h-5 bg-slate-200 rounded" />
+          </div>
+          <div className="space-y-4 pt-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-200 rounded w-1/3" />
+                  <div className="h-3 bg-slate-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
@@ -62,11 +124,7 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#EDF0F8] flex items-center justify-center">
-        <p className="text-sm text-slate-400 animate-pulse">Memuat profil...</p>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error || !profile) {

@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import { checkDB } from "../../db/client.js";
 import { pingTelegram } from "../../utils/telegram.js";
 import { Config, config } from "../../config.js";
-import { superAdminMiddleware } from "../auth/middleware.js";
+import { authMiddleware, superAdminMiddleware } from "../auth/middleware.js";
+import { checkSaweria } from "../../utils/saweria.js";
 
 export const healthHandler = new Hono()
   .get("/", (c) => {
@@ -27,4 +28,12 @@ export const healthHandler = new Hono()
       message: "OK",
       data: config,
     });
-  });
+  })
+  .get("/payment", authMiddleware, async (c) => {
+    const ok = await checkSaweria();
+    if (!ok) return c.json<ApiResponse>({success: false, message: "SAWERIA IS OK"})
+    return c.json<ApiResponse>({
+      success: true,
+      message: "OK"
+    })
+  })
