@@ -15,8 +15,7 @@ async function getClaimsOrRefresh(): Promise<JwtClaims | null> {
 }
 
 export const requireAuthMiddleware: MiddlewareFunction = async (_, next) => {
-  if (config.ENV == 'development') return next();
-  console.log("redirected")
+  if (config.ENV != 'production') return next();
   const claims = await getClaimsOrRefresh();
   if (!claims) return redirect(routes.authLogin);
 
