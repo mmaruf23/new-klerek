@@ -24,6 +24,7 @@ import {
   getSubStatus,
 } from "@/utils/subscription";
 import { config } from "@/config";
+import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
   { label: "Semua", value: undefined },
@@ -72,7 +73,7 @@ export default function DashboardPage() {
       setStores(res);
     } catch (err) {
       if (err instanceof Response && err.status >= 300 && err.status < 400) {
-        if (config.ENV == 'production') navigate(routes.authLogin);
+        if (config.ENV == "production") navigate(routes.authLogin);
         return;
       }
       setError("Gagal memuat data toko.");
@@ -234,14 +235,18 @@ export default function DashboardPage() {
       <div className="px-5 mt-3 flex gap-2">
         {STATUS_FILTERS.map((f) => {
           const selected = status === f.value;
+          const disabled = loading && !selected
           return (
             <button
               key={f.label}
               type="button"
+              disabled={disabled}
               onClick={() => handleStatusChange(f.value)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                selected ? "bg-slate-900 text-white" : "bg-white text-slate-500 shadow-sm hover:bg-slate-50"
-              }`}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-xs font-semibold transition-colors",
+                selected ? "bg-slate-900 text-white" : "bg-white text-slate-500 shadow-sm hover:bg-slate-50",
+                disabled && "opacity-50 cursor-not-allowed bg-slate-100 text-slate-300 shadow-none",
+              )}
             >
               {f.label}
             </button>
