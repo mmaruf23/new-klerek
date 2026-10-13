@@ -4,7 +4,7 @@ import { clerekHandler } from "./features/clerek/handler.js";
 import { storeHandler } from "./features/store/handler.js";
 import { authHandler } from "./features/auth/handler.js";
 import { paymentHandler } from "./features/payment/handler.js";
-import { adminHandler } from "./features/admin/handler.js";
+import { userHandler } from "./features/user/handler.js";
 import { errorHandler, notFoundHandler } from "./error.js";
 import { healthHandler } from "./features/health/handler.js";
 import { config } from "./config.js";
@@ -23,7 +23,7 @@ const app = new Hono()
   .route("/store", storeHandler)
   .route("/health", healthHandler)
   .route("/payment", paymentHandler)
-  .route("/admin", adminHandler)
+  .route("/admin", userHandler)
   .onError(errorHandler)
   .notFound(notFoundHandler);
 export default app;

@@ -27,6 +27,10 @@ export class Exception {
   public static Forbidden(m?: string) {
     return new HTTPException(403, { message: m ? m : "FORBIDDEN" });
   }
+
+  public static Conflict(m?: string) {
+    return new HTTPException(403, { message: m ? m : "CONFLICT" });
+  }
 }
 
 export const errorHandler: ErrorHandler = async (err, c) => {

@@ -1,8 +1,6 @@
 import { Hono } from "hono";
 import {
   loginWithGoogle,
-  getProfile,
-  getBalanceHistory,
   refreshUserToken,
   issueToken,
   loginWithPassword,
@@ -15,9 +13,8 @@ import { setCookie, getCookie, deleteCookie } from "hono/cookie";
 import type { CookieOptions } from "hono/utils/cookie";
 import { config } from "../../config.js";
 import { Balance } from "../../db/schema.js";
-import { bodyLimit } from "hono/body-limit";
-import { validator } from "hono/validator";
 import { loginValidator } from "./validator.js";
+import { getBalanceHistory, getProfile } from "../user/service.js";
 
 const REFRESH_COOKIE_KEY = "refresh_token";
 
@@ -81,6 +78,7 @@ export const authHandler = new Hono()
     const profile = await getProfile(payload.sub!);
     return c.json<ApiResponse<ProfileResponse>>({ success: true, data: profile });
   })
+  // todo : gabungkan dengan endpoint di atas
   .get("/balance", authMiddleware, async (c) => {
     const payload = c.get("jwtPayload") as JwtClaims;
     const history = await getBalanceHistory(payload.sub!);

@@ -1,7 +1,9 @@
 "use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -15,12 +17,21 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
   balanceAdjustSchema: () => balanceAdjustSchema,
+  createUserSchema: () => createUserSchema,
   dataPrice: () => dataPrice,
   generatePaymentSchema: () => generatePaymentSchema,
   googleAuthSchema: () => googleAuthSchema,
@@ -50,14 +61,6 @@ var googleAuthSchema = import_zod.z.object({
 var referStoreSchema = import_zod.z.object({
   referralCode: import_zod.z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
 });
-var balanceAdjustSchema = import_zod.z.object({
-  type: import_zod.z.enum(["credit", "debit"], { message: "Tipe harus credit atau debit" }),
-  amount: import_zod.z.number().int().positive("Jumlah harus lebih dari 0"),
-  note: import_zod.z.string().max(255).optional()
-});
-var roleUpdateSchema = import_zod.z.object({
-  role: import_zod.z.enum(["admin", "user"], { message: "Role harus admin atau user" })
-});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -78,9 +81,31 @@ var generatePaymentSchema = import_zod2.z.object({
   packageIndex: import_zod2.z.number({ message: "packageIndex harus angka" }).int().min(0, "Paket tidak valid").max(dataPrice.length - 1, "Paket tidak valid"),
   email: import_zod2.z.email("Email tidak valid").max(100, "Email terlalu panjang")
 });
+
+// src/balance.ts
+var import_zod3 = __toESM(require("zod"));
+var balanceAdjustSchema = import_zod3.default.object({
+  type: import_zod3.default.enum(["credit", "debit"], { message: "Tipe harus credit atau debit" }),
+  amount: import_zod3.default.number().int().positive("Jumlah harus lebih dari 0"),
+  note: import_zod3.default.string().max(255).optional()
+});
+
+// src/user.ts
+var import_zod4 = __toESM(require("zod"));
+var roleUpdateSchema = import_zod4.default.object({
+  role: import_zod4.default.enum(["admin", "user"], { message: "Role harus admin atau user" })
+});
+var createUserSchema = import_zod4.default.object({
+  name: import_zod4.default.string().min(3),
+  username: import_zod4.default.string().min(3),
+  password: import_zod4.default.string().min(3),
+  email: import_zod4.default.email(),
+  role: import_zod4.default.enum(["admin", "user"], { message: "Role harus admin atau user" })
+});
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   balanceAdjustSchema,
+  createUserSchema,
   dataPrice,
   generatePaymentSchema,
   googleAuthSchema,

@@ -21,7 +21,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   username: varchar("username", { length: 100 }).notNull().unique(),
   password: varchar("password", { length: 100 }),
-  googleId: varchar("google_id", { length: 255 }).notNull().unique(),
+  googleId: varchar("google_id", { length: 255 }).unique(),
   avatarUrl: varchar("avatar_url", { length: 500 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

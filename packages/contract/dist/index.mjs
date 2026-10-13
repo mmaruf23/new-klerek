@@ -17,14 +17,6 @@ var googleAuthSchema = z.object({
 var referStoreSchema = z.object({
   referralCode: z.string().length(6, "Kode referral harus 6 karakter").regex(/^[A-Z0-9]+$/, "Kode referral hanya huruf kapital dan angka")
 });
-var balanceAdjustSchema = z.object({
-  type: z.enum(["credit", "debit"], { message: "Tipe harus credit atau debit" }),
-  amount: z.number().int().positive("Jumlah harus lebih dari 0"),
-  note: z.string().max(255).optional()
-});
-var roleUpdateSchema = z.object({
-  role: z.enum(["admin", "user"], { message: "Role harus admin atau user" })
-});
 
 // src/subscription.ts
 var DAY = 86400;
@@ -45,8 +37,30 @@ var generatePaymentSchema = z2.object({
   packageIndex: z2.number({ message: "packageIndex harus angka" }).int().min(0, "Paket tidak valid").max(dataPrice.length - 1, "Paket tidak valid"),
   email: z2.email("Email tidak valid").max(100, "Email terlalu panjang")
 });
+
+// src/balance.ts
+import z3 from "zod";
+var balanceAdjustSchema = z3.object({
+  type: z3.enum(["credit", "debit"], { message: "Tipe harus credit atau debit" }),
+  amount: z3.number().int().positive("Jumlah harus lebih dari 0"),
+  note: z3.string().max(255).optional()
+});
+
+// src/user.ts
+import z4 from "zod";
+var roleUpdateSchema = z4.object({
+  role: z4.enum(["admin", "user"], { message: "Role harus admin atau user" })
+});
+var createUserSchema = z4.object({
+  name: z4.string().min(3),
+  username: z4.string().min(3),
+  password: z4.string().min(3),
+  email: z4.email(),
+  role: z4.enum(["admin", "user"], { message: "Role harus admin atau user" })
+});
 export {
   balanceAdjustSchema,
+  createUserSchema,
   dataPrice,
   generatePaymentSchema,
   googleAuthSchema,

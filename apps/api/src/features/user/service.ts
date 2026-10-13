@@ -1,8 +1,30 @@
-import { eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { count, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { users, store, balance } from "../../db/schema.js";
 import { Exception } from "../../error.js";
-import type { AdminUserItem, AdminUserDetail, BalanceAdjustInput, RoleUpdateInput } from "@packages/contract";
+import type {
+  AdminUserItem,
+  AdminUserDetail,
+  BalanceAdjustInput,
+  RoleUpdateInput,
+  CreateUserInput,
+} from "@packages/contract";
+import { hashPassword } from "../auth/utils.js";
+import { generateReferralCode } from "./util.js";
+
+export const generateUniqueReferralCode = async () => {
+  let referralCode: string;
+  let attempts = 0;
+  do {
+    referralCode = generateReferralCode();
+    const taken = await db.query.users.findFirst({
+      where: eq(users.refferalCode, referralCode),
+    });
+    if (!taken) break;
+    attempts++;
+  } while (attempts < 5);
+  return referralCode!;
+};
 
 interface ListUsersQuery {
   limit: number;
@@ -11,9 +33,7 @@ interface ListUsersQuery {
 }
 
 export const listUsers = async ({ limit, offset, q }: ListUsersQuery) => {
-  const where = q
-    ? or(ilike(users.name, `%${q}%`), ilike(users.email, `%${q}%`))
-    : undefined;
+  const where = q ? or(ilike(users.name, `%${q}%`), ilike(users.email, `%${q}%`)) : undefined;
 
   const [total, rows] = await Promise.all([
     db.$count(users, where),
@@ -111,7 +131,7 @@ export const adjustUserBalance = async (userId: string, input: BalanceAdjustInpu
       .from(balance)
       .where(eq(balance.userId, userId));
 
-    if ((Number(row?.total ?? 0)) < input.amount) throw Exception.BadRequest("Balance tidak mencukupi");
+    if (Number(row?.total ?? 0) < input.amount) throw Exception.BadRequest("Balance tidak mencukupi");
   }
 
   const [entry] = await db
@@ -140,4 +160,66 @@ export const updateUserRole = async (userId: string, input: RoleUpdateInput) => 
     .returning();
 
   return { id: updated.id, name: updated.name, email: updated.email, role: updated.role };
+};
+
+export const createUser = async (input: CreateUserInput) => {
+  const [exists] = await db
+    .select({ count: count() })
+    .from(users)
+    .where(or(eq(users.username, input.username), eq(users.email, input.email)));
+
+  if (exists.count) throw Exception.Conflict("users with this username / email already exists");
+
+  const hashedPassoword = await hashPassword(input.password);
+  const uniqueRefferalCode = await generateUniqueReferralCode();
+  const [result] = await db.insert(users).values({
+    username: input.username,
+    email: input.email, 
+    name: input.name,
+    password: hashedPassoword,
+    role: input.role,
+    refferalCode: uniqueRefferalCode,
+  }).returning();
+
+  return result
+};
+
+export const getBalanceHistory = async (userId: string) => {
+  return db.query.balance.findMany({
+    where: eq(balance.userId, userId),
+    orderBy: (b, { desc }) => [desc(b.createdAt)],
+  });
+};
+
+export const getProfile = async (userId: string) => {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+  if (!user) throw Exception.NotFound("User tidak ditemukan");
+
+  const [referredStores, balanceResult] = await Promise.all([
+    user.refferalCode
+      ? db.query.store.findMany({
+          where: eq(store.referrerId, user.refferalCode),
+          columns: { id: true, name: true, branchId: true, createdAt: true },
+        })
+      : Promise.resolve([]),
+    db
+      .select({
+        total: sql<number>`sum(case when ${balance.type} = 'credit' then ${balance.amount} else -${balance.amount} end)`,
+      })
+      .from(balance)
+      .where(eq(balance.userId, userId)),
+  ]);
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+    referralCode: user.refferalCode,
+    referredStores,
+    totalBalance: Number(balanceResult[0]?.total ?? 0),
+  };
 };

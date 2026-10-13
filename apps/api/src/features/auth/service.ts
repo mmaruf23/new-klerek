@@ -6,21 +6,8 @@ import { verifyGoogleIdToken } from "../../utils/googleAuth.js";
 import { setClaims, getClaims } from "../../utils/jwt.js";
 import { sendLog } from "../../utils/telegram.js";
 import type { GoogleAuthInput, LoginAuthInput } from "@packages/contract";
-import { comparePassword, generateReferralCode, getUsernameFromEmail } from "./utils.js";
-
-const generateUniqueReferralCode = async () => {
-  let referralCode: string;
-  let attempts = 0;
-  do {
-    referralCode = generateReferralCode();
-    const taken = await db.query.users.findFirst({
-      where: eq(users.refferalCode, referralCode),
-    });
-    if (!taken) break;
-    attempts++;
-  } while (attempts < 5);
-  return referralCode!;
-};
+import { comparePassword, getUsernameFromEmail } from "./utils.js";
+import { generateUniqueReferralCode } from "../user/service.js";
 
 export const loginWithPassword = async (paylaod: LoginAuthInput) => {
   const user = await db.query.users.findFirst({
@@ -117,42 +104,3 @@ export const refreshUserToken = async (token: string) => {
   return { token: newToken };
 };
 
-export const getBalanceHistory = async (userId: string) => {
-  return db.query.balance.findMany({
-    where: eq(balance.userId, userId),
-    orderBy: (b, { desc }) => [desc(b.createdAt)],
-  });
-};
-
-export const getProfile = async (userId: string) => {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
-  if (!user) throw Exception.NotFound("User tidak ditemukan");
-
-  const [referredStores, balanceResult] = await Promise.all([
-    user.refferalCode
-      ? db.query.store.findMany({
-          where: eq(store.referrerId, user.refferalCode),
-          columns: { id: true, name: true, branchId: true, createdAt: true },
-        })
-      : Promise.resolve([]),
-    db
-      .select({
-        total: sql<number>`sum(case when ${balance.type} = 'credit' then ${balance.amount} else -${balance.amount} end)`,
-      })
-      .from(balance)
-      .where(eq(balance.userId, userId)),
-  ]);
-
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    avatarUrl: user.avatarUrl,
-    role: user.role,
-    referralCode: user.refferalCode,
-    referredStores,
-    totalBalance: Number(balanceResult[0]?.total ?? 0),
-  };
-};

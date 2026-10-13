@@ -1,5 +1,5 @@
 import { JwtPayload } from 'jsonwebtoken';
-import { z } from 'zod';
+import z$1, { z } from 'zod';
 
 interface ApiResponse<T = null> {
     success: boolean;
@@ -133,22 +133,6 @@ interface AdminUserItem {
 interface AdminUserDetail extends AdminUserItem {
     referredStores: ReferredStore[];
 }
-declare const balanceAdjustSchema: z.ZodObject<{
-    type: z.ZodEnum<{
-        credit: "credit";
-        debit: "debit";
-    }>;
-    amount: z.ZodNumber;
-    note: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
-type BalanceAdjustInput = z.infer<typeof balanceAdjustSchema>;
-declare const roleUpdateSchema: z.ZodObject<{
-    role: z.ZodEnum<{
-        admin: "admin";
-        user: "user";
-    }>;
-}, z.core.$strip>;
-type RoleUpdateInput = z.infer<typeof roleUpdateSchema>;
 
 interface SubscriptionPackage {
     price: number;
@@ -180,4 +164,33 @@ interface PaymentResponse {
     paidAt: string | null;
 }
 
-export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GeneratePaymentInput, type GoogleAuthInput, type JwtClaims, type LoginAuthInput, type LoginResponse, type PaymentResponse, type PaymentStatus, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, generatePaymentSchema, googleAuthSchema, loginAuthSchema, referStoreSchema, roleUpdateSchema, time };
+declare const balanceAdjustSchema: z$1.ZodObject<{
+    type: z$1.ZodEnum<{
+        credit: "credit";
+        debit: "debit";
+    }>;
+    amount: z$1.ZodNumber;
+    note: z$1.ZodOptional<z$1.ZodString>;
+}, z$1.core.$strip>;
+type BalanceAdjustInput = z$1.infer<typeof balanceAdjustSchema>;
+
+declare const roleUpdateSchema: z$1.ZodObject<{
+    role: z$1.ZodEnum<{
+        admin: "admin";
+        user: "user";
+    }>;
+}, z$1.core.$strip>;
+type RoleUpdateInput = z$1.infer<typeof roleUpdateSchema>;
+declare const createUserSchema: z$1.ZodObject<{
+    name: z$1.ZodString;
+    username: z$1.ZodString;
+    password: z$1.ZodString;
+    email: z$1.ZodEmail;
+    role: z$1.ZodEnum<{
+        admin: "admin";
+        user: "user";
+    }>;
+}, z$1.core.$strip>;
+type CreateUserInput = z$1.infer<typeof createUserSchema>;
+
+export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type CreateUserInput, type Data, type GeneratePaymentInput, type GoogleAuthInput, type JwtClaims, type LoginAuthInput, type LoginResponse, type PaymentResponse, type PaymentStatus, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, createUserSchema, dataPrice, generatePaymentSchema, googleAuthSchema, loginAuthSchema, referStoreSchema, roleUpdateSchema, time };
