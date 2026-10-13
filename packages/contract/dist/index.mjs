@@ -7,6 +7,10 @@ var time = {
 
 // src/auth.ts
 import { z } from "zod";
+var loginAuthSchema = z.object({
+  username: z.string().min(3, "Username minimal 3 karakter"),
+  password: z.string().min(1, "Password wajib diisi")
+});
 var googleAuthSchema = z.object({
   credential: z.string().min(1, "Credential wajib diisi")
 });
@@ -46,6 +50,7 @@ export {
   dataPrice,
   generatePaymentSchema,
   googleAuthSchema,
+  loginAuthSchema,
   referStoreSchema,
   roleUpdateSchema,
   time

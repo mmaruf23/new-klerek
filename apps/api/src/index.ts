@@ -9,21 +9,23 @@ import { errorHandler, notFoundHandler } from "./error.js";
 import { healthHandler } from "./features/health/handler.js";
 import { config } from "./config.js";
 
-const app = new Hono();
-app.use(
-  "/*",
-  cors({
-    origin: config.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-  }),
-);
-app.route("/", clerekHandler);
-app.route("/auth", authHandler);
-app.route("/store", storeHandler);
-app.route("/health", healthHandler);
-app.route("/payment", paymentHandler);
-app.route("/admin", adminHandler);
-app.onError(errorHandler);
-app.notFound(notFoundHandler);
+const app = new Hono()
+  .use(
+    "/*",
+    cors({
+      origin: config.CORS_ORIGIN,
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      credentials: true,
+    }),
+  )
+  .route("/", clerekHandler)
+  .route("/auth", authHandler)
+  .route("/store", storeHandler)
+  .route("/health", healthHandler)
+  .route("/payment", paymentHandler)
+  .route("/admin", adminHandler)
+  .onError(errorHandler)
+  .notFound(notFoundHandler);
 export default app;
+
+export type AppType = typeof app;

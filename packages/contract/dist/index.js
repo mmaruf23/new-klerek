@@ -24,6 +24,7 @@ __export(index_exports, {
   dataPrice: () => dataPrice,
   generatePaymentSchema: () => generatePaymentSchema,
   googleAuthSchema: () => googleAuthSchema,
+  loginAuthSchema: () => loginAuthSchema,
   referStoreSchema: () => referStoreSchema,
   roleUpdateSchema: () => roleUpdateSchema,
   time: () => time
@@ -39,6 +40,10 @@ var time = {
 
 // src/auth.ts
 var import_zod = require("zod");
+var loginAuthSchema = import_zod.z.object({
+  username: import_zod.z.string().min(3, "Username minimal 3 karakter"),
+  password: import_zod.z.string().min(1, "Password wajib diisi")
+});
 var googleAuthSchema = import_zod.z.object({
   credential: import_zod.z.string().min(1, "Credential wajib diisi")
 });
@@ -79,6 +84,7 @@ var generatePaymentSchema = import_zod2.z.object({
   dataPrice,
   generatePaymentSchema,
   googleAuthSchema,
+  loginAuthSchema,
   referStoreSchema,
   roleUpdateSchema,
   time

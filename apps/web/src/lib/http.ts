@@ -1,8 +1,15 @@
 import { config } from "@/config";
 import type { ApiResponse, RefreshResponse } from "@packages/contract";
 import { getAccessToken, setAccessToken } from "@/lib/session";
-
+import type { AppType } from "@apps/api";
+import { hc } from "hono/client";
 const { API_URL } = config;
+
+export const client = hc<AppType>(API_URL, {
+  init: {
+    credentials: "include",
+  },
+});
 
 let refreshPromise: Promise<string | null> | null = null;
 

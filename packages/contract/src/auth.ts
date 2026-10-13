@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const loginAuthSchema = z.object({
+  username: z.string().min(3, "Username minimal 3 karakter"),
+  password: z.string().min(1, "Password wajib diisi"),
+});
+
 export const googleAuthSchema = z.object({
   credential: z.string().min(1, "Credential wajib diisi"),
 });
@@ -14,6 +19,8 @@ export const referStoreSchema = z.object({
 export type ReferStoreInput = z.infer<typeof referStoreSchema>;
 
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
+
+export type LoginAuthInput = z.infer<typeof loginAuthSchema>;
 
 export interface ReferredStore {
   id: string;

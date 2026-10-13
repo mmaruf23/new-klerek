@@ -1,7 +1,8 @@
 import { config } from "@/config";
-import { fetchWithAuth } from "@/lib/http";
+import { client, fetchWithAuth } from "@/lib/http";
 import { clearSession } from "@/lib/session";
-import type { ApiResponse, LoginResponse, ProfileResponse } from "@packages/contract";
+import type { ApiResponse, LoginAuthInput, LoginResponse, ProfileResponse } from "@packages/contract";
+import type { ClientResponse } from "hono/client";
 
 const { API_URL } = config;
 
@@ -22,6 +23,19 @@ export async function loginWithGoogle(credential: string): Promise<LoginResponse
   return json.data;
 }
 
+export async function login(payload: LoginAuthInput) {
+  try {
+    const result = await client.auth.login.$post({
+      json: payload,
+    });
+
+    const resultJson = await result.json();
+    if (!resultJson.success || !resultJson.data) throw new Error(resultJson.message ?? "Login gagal.");
+  } catch (error) {
+    throw new Error("Tidak dapat terhubung ke server.");
+  }
+}
+
 /**
  * Hapus cookie refresh_token di server lalu bersihkan session lokal.
  * Tanpa hapus cookie, auth guard akan silent-refresh dan user login lagi.
@@ -29,7 +43,8 @@ export async function loginWithGoogle(credential: string): Promise<LoginResponse
  */
 export async function logout(): Promise<void> {
   try {
-    await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+    // await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+    await client.auth.logout.$post();
   } catch {
     // abaikan — minimal session lokal tetap dihapus
   } finally {

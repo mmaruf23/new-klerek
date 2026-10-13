@@ -73,6 +73,10 @@ interface JwtClaims extends JwtPayload {
     readonly type?: "access" | "refresh";
 }
 
+declare const loginAuthSchema: z.ZodObject<{
+    username: z.ZodString;
+    password: z.ZodString;
+}, z.core.$strip>;
 declare const googleAuthSchema: z.ZodObject<{
     credential: z.ZodString;
 }, z.core.$strip>;
@@ -81,6 +85,7 @@ declare const referStoreSchema: z.ZodObject<{
 }, z.core.$strip>;
 type ReferStoreInput = z.infer<typeof referStoreSchema>;
 type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
+type LoginAuthInput = z.infer<typeof loginAuthSchema>;
 interface ReferredStore {
     id: string;
     name: string;
@@ -175,4 +180,4 @@ interface PaymentResponse {
     paidAt: string | null;
 }
 
-export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GeneratePaymentInput, type GoogleAuthInput, type JwtClaims, type LoginResponse, type PaymentResponse, type PaymentStatus, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, generatePaymentSchema, googleAuthSchema, referStoreSchema, roleUpdateSchema, time };
+export { type AdminUserDetail, type AdminUserItem, type ApiResponse, type BalanceAdjustInput, type Data, type GeneratePaymentInput, type GoogleAuthInput, type JwtClaims, type LoginAuthInput, type LoginResponse, type PaymentResponse, type PaymentStatus, type ProfileResponse, type ReferStoreInput, type ReferStoreResponse, type ReferredStore, type RefreshResponse, type RoleUpdateInput, type StoreResponse, type SubscriptionPackage, type Summary, balanceAdjustSchema, dataPrice, generatePaymentSchema, googleAuthSchema, loginAuthSchema, referStoreSchema, roleUpdateSchema, time };

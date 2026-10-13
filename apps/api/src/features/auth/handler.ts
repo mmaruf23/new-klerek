@@ -1,6 +1,13 @@
 import { Hono } from "hono";
-import { loginWithGoogle, getProfile, getBalanceHistory, refreshUserToken } from "./service.js";
-import { googleAuthSchema } from "@packages/contract";
+import {
+  loginWithGoogle,
+  getProfile,
+  getBalanceHistory,
+  refreshUserToken,
+  issueToken,
+  loginWithPassword,
+} from "./service.js";
+import { googleAuthSchema, loginAuthSchema } from "@packages/contract";
 import type { ApiResponse, LoginResponse, ProfileResponse, RefreshResponse } from "@packages/contract";
 import { authMiddleware } from "./middleware.js";
 import type { JwtClaims } from "@packages/contract";
@@ -8,6 +15,9 @@ import { setCookie, getCookie, deleteCookie } from "hono/cookie";
 import type { CookieOptions } from "hono/utils/cookie";
 import { config } from "../../config.js";
 import { Balance } from "../../db/schema.js";
+import { bodyLimit } from "hono/body-limit";
+import { validator } from "hono/validator";
+import { loginValidator } from "./validator.js";
 
 const REFRESH_COOKIE_KEY = "refresh_token";
 
@@ -23,6 +33,20 @@ const refreshCookieOptions = (): CookieOptions => {
 };
 
 export const authHandler = new Hono()
+  .post("/login", loginValidator, async (c) => {
+    const data = c.req.valid("json");
+
+    const user = await loginWithPassword(data);
+    const { token, refreshToken } = await issueToken(user);
+    setCookie(c, REFRESH_COOKIE_KEY, refreshToken, { ...refreshCookieOptions(), maxAge: 60 * 60 * 24 * 7 });
+    return c.json<ApiResponse<LoginResponse>>({
+      success: true,
+      data: {
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        token,
+      },
+    });
+  })
   .post("/google", async (c) => {
     const body = await c.req.json().catch(() => null);
     const result = googleAuthSchema.safeParse(body);
@@ -30,7 +54,8 @@ export const authHandler = new Hono()
       return c.json<ApiResponse>({ success: false, message: result.error.issues[0].message }, 400);
     }
 
-    const { user, token, refreshToken } = await loginWithGoogle(result.data);
+    const user = await loginWithGoogle(result.data);
+    const { token, refreshToken } = await issueToken(user);
     setCookie(c, REFRESH_COOKIE_KEY, refreshToken, { ...refreshCookieOptions(), maxAge: 60 * 60 * 24 * 7 });
     return c.json<ApiResponse<LoginResponse>>({
       success: true,

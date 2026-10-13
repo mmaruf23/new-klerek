@@ -1,16 +1,12 @@
 import { Exception } from "../../error.js";
 import { db } from "../../db/client.js";
 import { eq, sql } from "drizzle-orm";
-import { users, store, balance } from "../../db/schema.js";
+import { users, store, balance, User } from "../../db/schema.js";
 import { verifyGoogleIdToken } from "../../utils/googleAuth.js";
 import { setClaims, getClaims } from "../../utils/jwt.js";
 import { sendLog } from "../../utils/telegram.js";
-import type { GoogleAuthInput } from "@packages/contract";
-
-const REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-const generateReferralCode = () =>
-  Array.from({ length: 6 }, () => REFERRAL_CHARS[Math.floor(Math.random() * REFERRAL_CHARS.length)]).join("");
+import type { GoogleAuthInput, LoginAuthInput } from "@packages/contract";
+import { comparePassword, generateReferralCode, getUsernameFromEmail } from "./utils.js";
 
 const generateUniqueReferralCode = async () => {
   let referralCode: string;
@@ -24,6 +20,17 @@ const generateUniqueReferralCode = async () => {
     attempts++;
   } while (attempts < 5);
   return referralCode!;
+};
+
+export const loginWithPassword = async (paylaod: LoginAuthInput) => {
+  const user = await db.query.users.findFirst({
+    where: eq(users.username, paylaod.username),
+  });
+  if (!user || !user.password) throw Exception.Unauthorized("wrong username or password");
+  const match = await comparePassword(paylaod.password, user.password);
+  if (!match) throw Exception.Unauthorized("wrong username or password");
+
+  return user;
 };
 
 export const loginWithGoogle = async (payload: GoogleAuthInput) => {
@@ -42,6 +49,7 @@ export const loginWithGoogle = async (payload: GoogleAuthInput) => {
       .values({
         name: profile.name,
         email: profile.email,
+        username: getUsernameFromEmail(profile.email),
         googleId: profile.googleId,
         avatarUrl: profile.picture,
         role: "user",
@@ -67,24 +75,28 @@ export const loginWithGoogle = async (payload: GoogleAuthInput) => {
       .returning();
   }
 
+  return user;
+};
+
+export const issueToken = async (claims: User) => {
   const [token, refreshToken] = await Promise.all([
     setClaims({
-      sub: user.id,
-      role: user.role,
-      name: user.name,
+      sub: claims.id,
+      role: claims.role,
+      name: claims.name,
       type: "access",
       exp: Math.floor(Date.now() / 1000 + 60 * 10),
     }),
     setClaims({
-      sub: user.id,
-      role: user.role,
-      name: user.name,
+      sub: claims.id,
+      role: claims.role,
+      name: claims.name,
       type: "refresh",
       exp: Math.floor(Date.now() / 1000 + 60 * 60 * 24 * 7),
     }),
   ]);
 
-  return { user, token, refreshToken };
+  return { token, refreshToken };
 };
 
 export const refreshUserToken = async (token: string) => {

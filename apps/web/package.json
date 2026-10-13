@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "@packages/contract": "workspace:*",
+    "@apps/api": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-oauth/google": "^0.13.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "hono": "4.12.9",
     "lucide-react": "^1.14.0",
     "qrcode.react": "^4.2.0",
     "radix-ui": "^1.4.3",
