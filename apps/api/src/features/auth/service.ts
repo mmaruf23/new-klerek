@@ -1,7 +1,7 @@
 import { Exception } from "../../error.js";
 import { db } from "../../db/client.js";
-import { eq, sql } from "drizzle-orm";
-import { users, store, balance, User } from "../../db/schema.js";
+import { eq } from "drizzle-orm";
+import { users, type User } from "../../db/schema.js";
 import { verifyGoogleIdToken } from "../../utils/googleAuth.js";
 import { setClaims, getClaims } from "../../utils/jwt.js";
 import { sendLog } from "../../utils/telegram.js";

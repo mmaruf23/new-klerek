@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from "react";
-import { Upload, ChevronRight, ShieldCheck, Sparkles, FileArchive } from "lucide-react";
+import { Upload, ChevronRight, Sparkles, FileArchive } from "lucide-react";
 import { useUpload, getRecentUploads } from "@/hooks/useUpload";
 import { timeAgo } from "@/utils/format";
 

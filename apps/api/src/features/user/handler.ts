@@ -5,7 +5,7 @@ import { adminMiddleware, superAdminMiddleware } from "../auth/middleware.js";
 import { listUsers, getUserDetail, adjustUserBalance, updateUserRole, createUser } from "./service.js";
 import { Exception } from "../../error.js";
 import { createUserValidator } from "./validator.js";
-import { User } from "../../db/schema.js";
+import type { User } from "../../db/schema.js";
 
 export const userHandler = new Hono()
 

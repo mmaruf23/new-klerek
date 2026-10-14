@@ -1,4 +1,4 @@
-import { ApiResponse, time } from "@packages/contract";
+import { type ApiResponse, time } from "@packages/contract";
 import { Hono } from "hono";
 import { initAndValidateDB, prepareDbBuffer, processDB } from "./service.js";
 import { addNewStore, getStoreByIDWithLatestSubs } from "../store/service.js";

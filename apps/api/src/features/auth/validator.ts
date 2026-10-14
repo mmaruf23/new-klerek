@@ -1,4 +1,4 @@
-import { ApiResponse, loginAuthSchema } from "@packages/contract";
+import { type ApiResponse, loginAuthSchema } from "@packages/contract";
 import { validator } from "hono/validator";
 
 export const loginValidator = validator("json", (value, c) => {

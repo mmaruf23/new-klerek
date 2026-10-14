@@ -5,14 +5,14 @@ import {
   issueToken,
   loginWithPassword,
 } from "./service.js";
-import { googleAuthSchema, loginAuthSchema } from "@packages/contract";
+import { googleAuthSchema } from "@packages/contract";
 import type { ApiResponse, LoginResponse, ProfileResponse, RefreshResponse } from "@packages/contract";
 import { authMiddleware } from "./middleware.js";
 import type { JwtClaims } from "@packages/contract";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
 import type { CookieOptions } from "hono/utils/cookie";
 import { config } from "../../config.js";
-import { Balance } from "../../db/schema.js";
+import type { Balance } from "../../db/schema.js";
 import { loginValidator } from "./validator.js";
 import { getBalanceHistory, getProfile } from "../user/service.js";
 
