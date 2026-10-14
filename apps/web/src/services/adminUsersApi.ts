@@ -1,5 +1,5 @@
 import type { ApiResponse, AdminUserItem, AdminUserDetail } from "@packages/contract";
-import { fetchWithAuth } from "@/lib/http";
+import { fetchWithAuth } from "@/libs/http";
 
 export interface UsersListData {
   data: AdminUserItem[];

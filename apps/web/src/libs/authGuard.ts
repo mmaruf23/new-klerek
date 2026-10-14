@@ -1,7 +1,7 @@
 import { redirect, type MiddlewareFunction } from "react-router-dom";
 import type { JwtClaims } from "@packages/contract";
-import { refreshAccessToken } from "@/lib/http";
-import { getClaims } from "@/lib/session";
+import { refreshAccessToken } from "@/libs/http";
+import { getClaims } from "@/libs/session";
 import { routes } from "@/routes";
 import { config } from "@/config";
 

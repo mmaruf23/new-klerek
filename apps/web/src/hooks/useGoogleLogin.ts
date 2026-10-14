@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginWithGoogle } from "@/services/authApi";
 import { routes } from "@/routes";
-import { setAccessToken } from "@/lib/session";
+import { setAccessToken } from "@/libs/session";
 
 export function useGoogleLogin() {
   const navigate = useNavigate();

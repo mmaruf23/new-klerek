@@ -241,10 +241,10 @@ export default function HomePage() {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
+          {/* <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>File diproses lokal di browser. Tidak disimpan di server.</span>
-          </div>
+          </div> */}
         </div>
       </main>
     </>

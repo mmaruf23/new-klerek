@@ -1,6 +1,6 @@
 import { config } from "@/config";
 import type { ApiResponse, RefreshResponse } from "@packages/contract";
-import { getAccessToken, setAccessToken } from "@/lib/session";
+import { getAccessToken, setAccessToken } from "@/libs/session";
 import type { AppType } from "@apps/api";
 import { hc } from "hono/client";
 const { API_URL } = config;

@@ -1,8 +1,7 @@
 import { config } from "@/config";
-import { client, fetchWithAuth } from "@/lib/http";
-import { clearSession } from "@/lib/session";
+import { client, fetchWithAuth } from "@/libs/http";
+import { clearSession } from "@/libs/session";
 import type { ApiResponse, LoginAuthInput, LoginResponse, ProfileResponse } from "@packages/contract";
-import type { ClientResponse } from "hono/client";
 
 const { API_URL } = config;
 
@@ -23,7 +22,7 @@ export async function loginWithGoogle(credential: string): Promise<LoginResponse
   return json.data;
 }
 
-export async function login(payload: LoginAuthInput) {
+export async function loginWithPassword(payload: LoginAuthInput) {
   try {
     const result = await client.auth.login.$post({
       json: payload,
@@ -31,7 +30,12 @@ export async function login(payload: LoginAuthInput) {
 
     const resultJson = await result.json();
     if (!resultJson.success || !resultJson.data) throw new Error(resultJson.message ?? "Login gagal.");
+    return resultJson.data;
   } catch (error) {
+    if(error instanceof Error) {
+      throw error
+    }
+
     throw new Error("Tidak dapat terhubung ke server.");
   }
 }

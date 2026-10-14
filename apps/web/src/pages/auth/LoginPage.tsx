@@ -2,17 +2,45 @@ import { useState } from "react";
 import { Lock } from "lucide-react";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { useGoogleLogin } from "@/hooks/useGoogleLogin";
+// Asumsi Anda memiliki atau akan membuat hook untuk password login seperti ini:
+// import { usePasswordLogin } from "@/hooks/usePasswordLogin";
 import { config } from "@/config";
+import { userPasswordLogin } from "@/hooks/usePasswordLogin";
+import { Link } from "react-router-dom";
+import { routes } from "@/routes";
 
 const LoginPage = () => {
-  const { login, loading, error } = useGoogleLogin();
+  const { login: googleLogin, loading: googleLoading, error: googleErrorContext } = useGoogleLogin();
+  const {login: passwordLogin, loading: passwordLoginLoading, error: passwordLoginErrorContext} = userPasswordLogin();
+
+  // State untuk form login manual
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [googleError, setGoogleError] = useState<string | null>(null);
+  // const [passwordLoginError, setPasswordLoginError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setFormError("Username dan password wajib diisi.");
+      return;
+    }
+
+    passwordLogin({username, password});
+    setFormError(null);
+    
+  };
+
+  const isLoading = googleLoading || passwordLoginLoading;
+  const activeError = googleErrorContext ?? passwordLoginErrorContext ?? googleError ?? formError;
 
   return (
     <div className="min-h-screen bg-[#EDF0F8] flex justify-center">
       <div className="w-full max-w-sm flex flex-col min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-14 pb-2">
+          <Link to={routes.home} >
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -21,6 +49,7 @@ const LoginPage = () => {
             </div>
             <span className="text-base font-semibold text-slate-800 tracking-tight">klerek</span>
           </div>
+          </Link>
           <span className="bg-slate-900 text-white text-xs font-medium px-4 py-1.5 rounded-full">Admin</span>
         </div>
 
@@ -31,18 +60,62 @@ const LoginPage = () => {
             <Lock className="w-7 h-7 text-indigo-500" strokeWidth={2.5} />
           </div>
 
-          <h1 className="text-[2rem] font-bold text-slate-900 leading-tight mb-2">Masuk</h1>
-          <p className="text-slate-500 text-sm leading-relaxed mb-9">
-            Masuk dengan akun Google untuk mengelola toko, membership, dan riwayat upload. Akun baru otomatis
-            terdaftar saat pertama kali masuk.
-          </p>
+          {/* <h1 className="text-[2rem] font-bold text-slate-900 leading-tight mb-2">Masuk</h1> */}
 
           <div className="space-y-5">
+            {/* Form Username & Password */}
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5 tracking-wider">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Masukkan username"
+                  disabled={isLoading}
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:border-indigo-500 text-slate-800 disabled:bg-slate-50 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5 tracking-wider">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  disabled={isLoading}
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:border-indigo-500 text-slate-800 disabled:bg-slate-50 transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-3 px-4 rounded-xl shadow-sm transition-colors disabled:bg-indigo-400"
+              >
+                {passwordLoginLoading ? "Memproses..." : "Masuk"}
+              </button>
+            </form>
+
+            {/* Pembatas / Divider */}
+            <div className="relative flex py-2 items-center">
+              <div className="grow border-t border-slate-300"></div>
+              <span className="shrink mx-4 text-slate-400 text-xs font-medium uppercase tracking-wider">
+                Atau masuk dengan
+              </span>
+              <div className="grow border-t border-slate-300"></div>
+            </div>
+            {/* Google Login */}
             <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID}>
               <GoogleLogin
                 onSuccess={(response) => {
                   setGoogleError(null);
-                  if (response.credential) login(response.credential);
+                  if (response.credential) googleLogin(response.credential);
                 }}
                 onError={() => setGoogleError("Login Google gagal. Coba lagi.")}
                 width="352"
@@ -50,8 +123,9 @@ const LoginPage = () => {
               />
             </GoogleOAuthProvider>
 
-            {loading && <p className="text-sm text-slate-500">Memproses...</p>}
-            {(error ?? googleError) && <p className="text-sm text-red-500">{error ?? googleError}</p>}
+            {/* Status Loading Umum & Error */}
+            {googleLoading && <p className="text-sm text-slate-500">Memproses Google Login...</p>}
+            {activeError && <p className="text-sm text-red-500 font-medium">{activeError}</p>}
           </div>
         </div>
 

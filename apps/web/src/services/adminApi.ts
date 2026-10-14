@@ -1,8 +1,8 @@
 import { redirect } from "react-router-dom";
 import type { ApiResponse, StoreResponse } from "@packages/contract";
 import { config } from "@/config";
-import { fetchWithAuth } from "@/lib/http";
-import { clearSession } from "@/lib/session";
+import { fetchWithAuth } from "@/libs/http";
+import { clearSession } from "@/libs/session";
 import { routes } from "@/routes";
 
 export interface SubscribeResult {

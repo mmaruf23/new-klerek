@@ -10,7 +10,7 @@ import ReferPage from "./pages/ReferPage";
 import UsersPage from "./pages/admin/UsersPage";
 import Layout from "./components/layout/Layout";
 import ContactPage from "./pages/ContactPage";
-import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware, requireSuperadminMiddleware } from "@/lib/authGuard";
+import { redirectIfAuthenticatedMiddleware, requireAuthMiddleware, requireSuperadminMiddleware } from "@/libs/authGuard";
 import { routes } from "./routes";
 import AdminLayout from "./components/layout/AdminLayout";
 

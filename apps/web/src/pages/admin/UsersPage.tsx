@@ -4,7 +4,7 @@ import { Search, X, ChevronRight, Plus, Minus, Store, Check, ShieldCheck, User a
 import type { AdminUserItem, AdminUserDetail } from "@packages/contract";
 import type { ApiResponse } from "@packages/contract";
 import { fetchUsers, fetchUserDetail, adjustBalance, updateUserRole } from "@/services/adminUsersApi";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser } from "@/libs/session";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
 import { formatDate, formatRupiah } from "@/utils/format";
 
