@@ -1,6 +1,6 @@
-import { and, desc, eq, exists, gt, ilike, not, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, exists, gt, ilike, max, not, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { store, subscription, users, balance, type StoreInsert } from "../../db/schema.js";
+import { store, subscription, users, balance, type StoreInsert, User } from "../../db/schema.js";
 import { Exception } from "../../error.js";
 import type { StoreResponse } from "@packages/contract";
 import { dataPrice } from "../subscription/data.js";
@@ -14,11 +14,37 @@ interface PageQuery {
   status?: StoreStatusFilter;
 }
 
-interface UserIDQuery {
+interface UserQuery {
   userId?: string;
+  role?: User['role']
 }
 
-export const getAllStore = async ({ limit, offset, search, status, userId }: UserIDQuery & PageQuery) => {
+export const countStore = async ({ userId, role }: Required<UserQuery>) => {
+  const isSuperAdmin = role === 'superadmin'
+
+  const storeSubscriptions = db.$with('store_subs').as(
+    db.select({
+      storeId: subscription.storeId,
+      isTrial: max(subscription.isTrial).as('isTrial'), // Bungkus aggregate atau sesuaikan
+      lastSubs: max(subscription.expiresAt).as('lastSubscription')
+    }).from(subscription).groupBy(subscription.storeId)
+  );
+
+  const [result] = await db.select({
+    total: count(), 
+    active: count(sql`case when ${storeSubscriptions.lastSubs} >= NOW() then 1 end`),
+    trial: count(sql`case when ${storeSubscriptions.lastSubs} >= NOW() and ${storeSubscriptions.isTrial} = true then 1 end`),
+    expired: count(sql`case when ${storeSubscriptions.lastSubs} < NOW() then 1 end`),
+  })
+  .from(store)
+  .leftJoin(storeSubscriptions, eq(store.id, storeSubscriptions.storeId))
+  .leftJoin(users, eq(users.refferalCode, store.referrerId))
+  .where(!isSuperAdmin ? eq(users.id, userId) : undefined) // Sesuaikan logika filternya
+  
+  return result
+}
+
+export const getAllStore = async ({ limit, offset, search, status, userId }: UserQuery & PageQuery) => {
   const empty = { data: [], total: 0, limit, offset, hasNext: false };
 
   const user = await db.query.users.findFirst({

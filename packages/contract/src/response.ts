@@ -60,3 +60,11 @@ export interface StoreResponse {
     isTrial: boolean | null;
   }[];
 }
+
+export interface RecapStoreResponse {
+  active: number;
+  trial: number;
+  expired: number;
+  expiredSoon: number;
+  total: number;
+}

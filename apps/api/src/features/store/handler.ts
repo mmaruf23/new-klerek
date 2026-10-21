@@ -1,7 +1,7 @@
 import type { ApiResponse, JwtClaims, StoreResponse, ReferStoreResponse } from "@packages/contract";
 import { referStoreSchema } from "@packages/contract";
 import { Hono } from "hono";
-import { getAllStore, getStoreByIDWithLatestSubs, getStorePublicInfo, addSubscriptionByBalance, setStoreReferrer } from "./service.js";
+import { getAllStore, getStoreByIDWithLatestSubs, getStorePublicInfo, addSubscriptionByBalance, setStoreReferrer, countStore } from "./service.js";
 import { isValidStoreID } from "./helper.js";
 import { Exception } from "../../error.js";
 import { authMiddleware, cookieMiddleware } from "../auth/middleware.js";
@@ -28,6 +28,12 @@ export const storeHandler = new Hono()
     const data = await getStorePublicInfo(id);
     if (!data) throw Exception.NotFound("store not found");
 
+    return c.json<ApiResponse<typeof data>>({ success: true, data });
+  })
+  .get("/count", authMiddleware, async (c) => {
+    const { sub: userId, role } = c.get("jwtPayload") as JwtClaims;
+    if (!userId || !role) throw Exception.Unauthorized("Claims value tidak valid!")
+    const data = await countStore({userId, role})
     return c.json<ApiResponse<typeof data>>({ success: true, data });
   })
 
