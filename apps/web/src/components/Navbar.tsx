@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "@tanstack/react-router";
 import { Upload } from "lucide-react";
 import { routes } from "@/routes";
 
@@ -31,7 +31,7 @@ export default function Navbar() {
             <Link
               key={label}
               to={href}
-              className={`font-medium px-3 py-1.5 ${active.href == href ? "bg-gray-100 rounded-lg text-slate-800" : "text-slate-600 "}`}
+              className={`font-medium px-3 py-1.5 ${active.href === href ? "bg-gray-100 rounded-lg text-slate-800" : "text-slate-600 "}`}
             >
               {label}
             </Link>

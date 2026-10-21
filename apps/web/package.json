@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@packages/contract": "workspace:*",
     "@apps/api": "workspace:*",
+    "@packages/contract": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-oauth/google": "^0.13.5",
+    "@tanstack/react-query": "^5.104.5",
+    "@tanstack/react-router": "^1.170.45",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "hono": "4.12.9",
@@ -22,7 +24,6 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.14.2",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

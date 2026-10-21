@@ -1,23 +1,21 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
-import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
-import { useGoogleLogin } from "@/hooks/useGoogleLogin";
-// Asumsi Anda memiliki atau akan membuat hook untuk password login seperti ini:
-// import { usePasswordLogin } from "@/hooks/usePasswordLogin";
-import { config } from "@/config";
-import { userPasswordLogin } from "@/hooks/usePasswordLogin";
-import { Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { routes } from "@/routes";
+import {
+  useGoogleLoginMutation,
+  usePasswordLoginMutation,
+} from "@/features/auth/hooks/useAuth";
 
 const LoginPage = () => {
-  const { login: googleLogin, loading: googleLoading, error: googleErrorContext } = useGoogleLogin();
-  const {login: passwordLogin, loading: passwordLoginLoading, error: passwordLoginErrorContext} = userPasswordLogin();
+  const navigate = useNavigate();
+  const googleLoginMutation = useGoogleLoginMutation();
+  const passwordLoginMutation = usePasswordLoginMutation();
 
-  // State untuk form login manual
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [googleError, setGoogleError] = useState<string | null>(null);
-  // const [passwordLoginError, setPasswordLoginError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -27,30 +25,55 @@ const LoginPage = () => {
       return;
     }
 
-    passwordLogin({username, password});
     setFormError(null);
-    
+    passwordLoginMutation.mutate(
+      { username, password },
+      {
+        onSuccess: () => {
+          navigate({ to: routes.dashboard });
+        },
+      },
+    );
   };
 
-  const isLoading = googleLoading || passwordLoginLoading;
-  const activeError = googleErrorContext ?? passwordLoginErrorContext ?? googleError ?? formError;
+  const handleGoogleSuccess = (credential?: string) => {
+    if (!credential) return;
+    setGoogleError(null);
+    googleLoginMutation.mutate(credential, {
+      onSuccess: () => {
+        navigate({ to: routes.dashboard });
+      },
+    });
+  };
+
+  const isLoading =
+    googleLoginMutation.isPending || passwordLoginMutation.isPending;
+  const activeError =
+    googleLoginMutation.error?.message ??
+    passwordLoginMutation.error?.message ??
+    googleError ??
+    formError;
 
   return (
     <div className="min-h-screen bg-[#EDF0F8] flex justify-center">
       <div className="w-full max-w-sm flex flex-col min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-14 pb-2">
-          <Link to={routes.home} >
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1L15 8L8 15L1 8L8 1Z" fill="white" />
-              </svg>
+          <Link to={routes.home}>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1L15 8L8 15L1 8L8 1Z" fill="white" />
+                </svg>
+              </div>
+              <span className="text-base font-semibold text-slate-800 tracking-tight">
+                klerek
+              </span>
             </div>
-            <span className="text-base font-semibold text-slate-800 tracking-tight">klerek</span>
-          </div>
           </Link>
-          <span className="bg-slate-900 text-white text-xs font-medium px-4 py-1.5 rounded-full">Admin</span>
+          <span className="bg-slate-900 text-white text-xs font-medium px-4 py-1.5 rounded-full">
+            Admin
+          </span>
         </div>
 
         {/* Main content */}
@@ -59,8 +82,6 @@ const LoginPage = () => {
           <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-7">
             <Lock className="w-7 h-7 text-indigo-500" strokeWidth={2.5} />
           </div>
-
-          {/* <h1 className="text-[2rem] font-bold text-slate-900 leading-tight mb-2">Masuk</h1> */}
 
           <div className="space-y-5">
             {/* Form Username & Password */}
@@ -98,7 +119,7 @@ const LoginPage = () => {
                 disabled={isLoading}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-3 px-4 rounded-xl shadow-sm transition-colors disabled:bg-indigo-400"
               >
-                {passwordLoginLoading ? "Memproses..." : "Masuk"}
+                {passwordLoginMutation.isPending ? "Memproses..." : "Masuk"}
               </button>
             </form>
 
@@ -110,22 +131,26 @@ const LoginPage = () => {
               </span>
               <div className="grow border-t border-slate-300"></div>
             </div>
+
             {/* Google Login */}
-            <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID}>
-              <GoogleLogin
-                onSuccess={(response) => {
-                  setGoogleError(null);
-                  if (response.credential) googleLogin(response.credential);
-                }}
-                onError={() => setGoogleError("Login Google gagal. Coba lagi.")}
-                width="352"
-                text="signin_with"
-              />
-            </GoogleOAuthProvider>
+            <GoogleLogin
+              onSuccess={(response) => {
+                if (response.credential) {
+                  handleGoogleSuccess(response.credential);
+                }
+              }}
+              onError={() => setGoogleError("Login Google gagal. Coba lagi.")}
+              width="352"
+              text="signin_with"
+            />
 
             {/* Status Loading Umum & Error */}
-            {googleLoading && <p className="text-sm text-slate-500">Memproses Google Login...</p>}
-            {activeError && <p className="text-sm text-red-500 font-medium">{activeError}</p>}
+            {googleLoginMutation.isPending && (
+              <p className="text-sm text-slate-500">Memproses Google Login...</p>
+            )}
+            {activeError && (
+              <p className="text-sm text-red-500 font-medium">{activeError}</p>
+            )}
           </div>
         </div>
 

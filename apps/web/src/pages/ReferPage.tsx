@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { Gift, Check, ArrowLeft, Store } from "lucide-react";
 import { routes } from "@/routes";
-import { submitReferral } from "@/services/adminApi";
+import { useSubmitReferralMutation } from "@/features/dashboard/hooks/useStores";
 
 interface SuccessState {
   storeName: string;
@@ -11,22 +11,19 @@ interface SuccessState {
 
 export default function ReferPage() {
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<SuccessState | null>(null);
+  const submitReferralMutation = useSubmitReferralMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const data = await submitReferral(code.toUpperCase());
-      setSuccess({ storeName: data.storeName, referrerName: data.referrerName });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-    }
+    submitReferralMutation.mutate(code.toUpperCase(), {
+      onSuccess: (data) => {
+        setSuccess({
+          storeName: data.storeName,
+          referrerName: data.referrerName,
+        });
+      },
+    });
   };
 
   if (success) {
@@ -36,7 +33,7 @@ export default function ReferPage() {
           <div className="flex items-center px-5 pt-14 pb-2 gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1L15 8L8 15L1 8L8 1Z" fill="white" />
+                <path d="M8 1L15 8L8 1Z" fill="white" />
               </svg>
             </div>
             <span className="text-base font-semibold text-slate-800 tracking-tight">klerek</span>
@@ -86,6 +83,9 @@ export default function ReferPage() {
     );
   }
 
+  const error = submitReferralMutation.error?.message;
+  const loading = submitReferralMutation.isPending;
+
   return (
     <div className="min-h-screen bg-[#EDF0F8] flex justify-center">
       <div className="w-full max-w-sm flex flex-col min-h-screen">
@@ -93,7 +93,7 @@ export default function ReferPage() {
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1L15 8L8 15L1 8L8 1Z" fill="white" />
+                <path d="M8 1L15 8L8 1Z" fill="white" />
               </svg>
             </div>
             <span className="text-base font-semibold text-slate-800 tracking-tight">klerek</span>

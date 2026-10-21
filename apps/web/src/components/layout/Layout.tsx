@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import Navbar from "../Navbar";
 import { AlignJustify, BarChart2, Info } from "lucide-react";
 import { routes } from "@/routes";
@@ -17,7 +17,7 @@ const Layout = () => {
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1L15 8L8 15L1 8L8 1Z" fill="white" />
+                <path d="M8 1L15 8L8 1Z" fill="white" />
               </svg>
             </div>
             <span className="font-bold text-slate-900 text-sm tracking-tight">klerek</span>
@@ -28,7 +28,7 @@ const Layout = () => {
         </header>
         <Outlet />
 
-        {(location.pathname == routes.summary || location.pathname == routes.detail) && (
+        {(location.pathname === routes.summary || location.pathname === routes.detail) && (
           <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex gap-2 z-10">
             <Link
               to={routes.summary}

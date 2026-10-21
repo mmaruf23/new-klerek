@@ -1,8 +1,7 @@
-import { useNavigate, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
-import type { ProfileResponse } from "@packages/contract";
+import { useNavigate, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { routes } from "@/routes";
-import { logout, fetchProfile } from "@/services/authApi";
+import { useProfileQuery, useLogoutMutation } from "@/features/auth/hooks/useAuth";
 import { formatDate, formatRupiah } from "@/utils/format";
 import {
   User,
@@ -41,7 +40,6 @@ function ProfileSkeleton() {
       </header>
 
       <main className="max-w-2xl mx-auto px-5 py-10 space-y-5">
-        {/* Profile Card Skeleton */}
         <div className="bg-white rounded-3xl p-7 shadow-sm space-y-6">
           <div className="flex items-start gap-5">
             <div className="w-16 h-16 rounded-2xl bg-slate-200 shrink-0" />
@@ -50,23 +48,13 @@ function ProfileSkeleton() {
               <div className="h-4 bg-slate-100 rounded w-3/4" />
             </div>
           </div>
-          <div className="pt-6 border-t border-slate-100 space-y-3">
-            <div className="h-3 bg-slate-200 rounded w-24" />
-            <div className="h-14 bg-slate-50 rounded-2xl" />
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="bg-slate-50 rounded-2xl p-4 h-20" />
+            <div className="bg-slate-50 rounded-2xl p-4 h-20" />
           </div>
         </div>
 
-        {/* Balance Skeleton */}
-        <div className="bg-white rounded-3xl p-7 shadow-sm flex items-center justify-between">
-          <div className="space-y-2 flex-1">
-            <div className="h-3 bg-slate-200 rounded w-24" />
-            <div className="h-8 bg-slate-200 rounded w-1/3" />
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 shrink-0" />
-        </div>
-
-        {/* Referred Stores Skeleton */}
-        <div className="bg-white rounded-3xl p-7 shadow-sm space-y-4">
+        <div className="bg-white rounded-3xl p-7 shadow-sm space-y-5">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="h-4 bg-slate-200 rounded w-36" />
@@ -93,23 +81,9 @@ function ProfileSkeleton() {
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<ProfileResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: profile, isLoading, error } = useProfileQuery();
+  const logoutMutation = useLogoutMutation();
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    fetchProfile()
-      .then((data) => setProfile(data))
-      .catch((err) => {
-        if (err instanceof Response && err.status >= 300 && err.status < 400) {
-          navigate(routes.authLogin);
-          return;
-        }
-        setError(err instanceof Error ? err.message : "Gagal memuat profil");
-      })
-      .finally(() => setLoading(false));
-  }, [navigate]);
 
   const handleCopy = () => {
     if (!profile?.referralCode) return;
@@ -119,21 +93,34 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate(routes.authLogin);
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        navigate({ to: routes.authLogin });
+      },
+    });
   };
 
-  if (loading) {
+  if (isLoading) {
     return <ProfileSkeleton />;
   }
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-[#EDF0F8] flex flex-col items-center justify-center p-4">
-        <p className="text-sm text-red-500 mb-2">{error ?? "Profil tidak ditemukan"}</p>
-        <button onClick={() => navigate(routes.home)} className="text-xs text-indigo-600 font-semibold underline">
-          Kembali ke Beranda
-        </button>
+      <div className="min-h-screen bg-[#EDF0F8] flex items-center justify-center p-5">
+        <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-sm space-y-4">
+          <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mx-auto text-red-600">
+            !
+          </div>
+          <p className="text-sm text-slate-600">
+            {error instanceof Error ? error.message : "Gagal memuat profil"}
+          </p>
+          <button
+            onClick={() => navigate({ to: routes.authLogin })}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition-colors"
+          >
+            Kembali ke Login
+          </button>
+        </div>
       </div>
     );
   }
@@ -143,123 +130,125 @@ export default function ProfilePage() {
       <header className="bg-white shadow-sm h-14 flex items-center justify-between px-6">
         <Link to={routes.home} className="flex items-center gap-2">
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <div className="w-3 h-3 rounded-xs bg-white rotate-45" />
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1L15 8L8 15L1 8L8 1Z" fill="white" />
+            </svg>
           </div>
           <span className="font-bold text-slate-900 text-sm tracking-tight">klerek</span>
         </Link>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          disabled={logoutMutation.isPending}
+          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-600 transition-colors py-1.5 px-3 rounded-lg hover:bg-red-50"
         >
-          <LogOut className="w-4 h-4" />
-          Keluar
+          <LogOut className="w-3.5 h-3.5" />
+          <span>{logoutMutation.isPending ? "Keluar..." : "Keluar"}</span>
         </button>
       </header>
 
-      <main className="max-w-2xl mx-auto px-5 py-10 space-y-5">
-        <div className="bg-white rounded-3xl p-7 shadow-sm">
-          <div className="flex items-start gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0 overflow-hidden">
-              {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-7 h-7 text-indigo-500" strokeWidth={2} />
-              )}
-            </div>
+      <main className="max-w-2xl mx-auto px-5 py-8 space-y-5">
+        <div className="bg-white rounded-3xl p-6 shadow-sm space-y-5">
+          <div className="flex items-start gap-4">
+            {profile.avatarUrl ? (
+              <img
+                src={profile.avatarUrl}
+                alt={profile.name}
+                className="w-16 h-16 rounded-2xl object-cover shrink-0 ring-2 ring-indigo-50"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0">
+                <User className="w-8 h-8 text-indigo-500" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-xl font-bold text-slate-900 truncate">{profile.name}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg font-bold text-slate-900 truncate">{profile.name}</h1>
                 <span
-                  className={`inline-flex items-center gap-1 text-xs font-medium border rounded-full px-2.5 py-0.5 ${ROLE_COLOR[profile.role] ?? ROLE_COLOR.user}`}
+                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${ROLE_COLOR[profile.role] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}
                 >
-                  <BadgeCheck className="w-3 h-3" />
                   {ROLE_LABEL[profile.role] ?? profile.role}
                 </span>
               </div>
-              <p className="text-sm text-slate-400">{profile.email}</p>
+              <p className="text-xs text-slate-500 truncate mt-0.5">{profile.email}</p>
             </div>
           </div>
 
-          {profile.referralCode && (
-            <div className="mt-6 pt-6 border-t border-slate-100">
-              <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3">Kode Referral</p>
-              <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-5 py-4">
-                <span className="text-2xl font-extrabold text-slate-900 tracking-[0.2em]">{profile.referralCode}</span>
-                <button
-                  onClick={handleCopy}
-                  className="flex items-center gap-1.5 text-sm font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
-                >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? "Tersalin" : "Salin"}
-                </button>
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="bg-slate-50 rounded-2xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-medium">Total Saldo Komisi</span>
               </div>
-              <p className="text-xs text-slate-400 mt-2">
-                Bagikan kode ini ke toko lain agar tercatat sebagai referral kamu.
+              <p className="text-lg font-bold text-slate-900">
+                {formatRupiah(profile.totalBalance ?? 0)}
               </p>
             </div>
-          )}
-        </div>
 
-        <div className="bg-white rounded-3xl p-7 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-1">Saldo Komisi</p>
-              <p className="text-3xl font-extrabold text-slate-900">{formatRupiah(profile.totalBalance)}</p>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-emerald-500" />
+            <div className="bg-slate-50 rounded-2xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <BadgeCheck className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-medium">Kode Referral</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-slate-900 tracking-wider">
+                  {profile.referralCode ?? "—"}
+                </span>
+                {profile.referralCode && (
+                  <button
+                    onClick={handleCopy}
+                    className="p-1 hover:bg-slate-200 rounded-md transition-colors"
+                    title="Salin kode"
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-slate-400" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-7 shadow-sm">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-800">Toko yang direferral</h2>
-              <p className="text-xs text-slate-400 mt-0.5">{profile.referredStores.length} toko</p>
+              <h2 className="text-sm font-bold text-slate-900">Toko Terhubung</h2>
+              <p className="text-xs text-slate-400">
+                {profile.referredStores?.length ?? 0} toko menggunakan kode referral kamu
+              </p>
             </div>
             <Store className="w-5 h-5 text-slate-300" />
           </div>
 
-          {profile.referredStores.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-                <Store className="w-5 h-5 text-slate-300" />
-              </div>
-              <p className="text-sm text-slate-400">Belum ada toko yang menggunakan kode referral kamu.</p>
+          {!profile.referredStores || profile.referredStores.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-xs">
+              Belum ada toko yang terhubung dengan kode referral Anda.
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {profile.referredStores.map((s) => (
-                <li key={s.id} className="py-4 first:pt-0 last:pb-0 flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                    <Store className="w-4 h-4 text-indigo-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{s.name}</p>
-                    <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-xs text-slate-400 font-mono">{s.id}</span>
-                      {s.branchId && (
-                        <span className="flex items-center gap-1 text-xs text-slate-400">
+            <div className="divide-y divide-slate-100">
+              {profile.referredStores.map((st) => (
+                <div key={st.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{st.name}</p>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-0.5">
+                      {st.branchId && (
+                        <span className="flex items-center gap-1">
                           <GitBranch className="w-3 h-3" />
-                          {s.branchId}
+                          Cabang {st.branchId}
                         </span>
                       )}
-                      <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <span className="flex items-center gap-1">
                         <CalendarDays className="w-3 h-3" />
-                        {formatDate(s.createdAt)}
+                        {formatDate(st.createdAt)}
                       </span>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </main>

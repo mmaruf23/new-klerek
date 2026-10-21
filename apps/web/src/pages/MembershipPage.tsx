@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { dataPrice } from '@packages/contract';
 import type { Summary } from '@packages/contract';
-import { generateQris, checkPayment, type Payment } from '@/services/paymentApi';
-import { fetchStorePublic } from '@/services/adminApi';
+import { generateQrisApi, checkPaymentApi, type Payment } from '@/features/payment/services/paymentService';
+import { fetchStorePublicApi } from '@/features/dashboard/services/storeService';
 import { QRCodeCanvas } from 'qrcode.react';
 import { ArrowLeft, CheckCircle, Download, Info, Mail, QrCode, Search, Zap } from 'lucide-react';
 import { useCountdown } from '@/hooks/useCountdown';
@@ -276,7 +275,6 @@ function QrisView({
 // ── Package selection view ───────────────────────────────────────────────────
 
 export default function MembershipPage() {
-  const navigate = useNavigate();
   const [view, setView] = useState<'packages' | 'qris'>('packages');
   const [selectedPkg, setSelectedPkg] = useState(4);
   const [loading, setLoading] = useState<number | null>(null);
@@ -300,7 +298,7 @@ export default function MembershipPage() {
     if (pollStatus !== 'polling' || !payment) return;
     intervalRef.current = setInterval(async () => {
       try {
-        const updated = await checkPayment(payment.invoiceId);
+        const updated = await checkPaymentApi(payment.invoiceId);
         if (updated.status === 'paid') { setPollStatus('paid'); stopPolling(); }
         else if (updated.status === 'expired' || updated.status === 'failed') {
           setPollStatus('expired'); stopPolling();
@@ -313,7 +311,7 @@ export default function MembershipPage() {
   const handleCheckNow = async () => {
     if (!payment) return;
     try {
-      const updated = await checkPayment(payment.invoiceId);
+      const updated = await checkPaymentApi(payment.invoiceId);
       if (updated.status === 'paid') { setPollStatus('paid'); stopPolling(); }
       else if (updated.status === 'expired' || updated.status === 'failed') {
         setPollStatus('expired'); stopPolling();
@@ -336,7 +334,7 @@ export default function MembershipPage() {
     setLoading(idx);
     setError(null);
     try {
-      const result = await generateQris({ storeId: resolvedStore.id, packageIndex: idx, email: trimmedEmail });
+      const result = await generateQrisApi({ storeId: resolvedStore.id, packageIndex: idx, email: trimmedEmail });
       setPayment(result);
       setSelectedPkg(idx);
       setPollStatus('polling');
@@ -356,7 +354,7 @@ export default function MembershipPage() {
     setStoreInputLoading(true);
     setStoreInputError('');
     try {
-      const data = await fetchStorePublic(id);
+      const data = await fetchStorePublicApi(id);
       setResolvedStore(data);
       setStoreInput('');
     } catch (err) {
@@ -411,7 +409,7 @@ export default function MembershipPage() {
       {/* ── Mobile header ── */}
       <div className="md:hidden flex items-center justify-center px-5 pt-2 pb-4 relative">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => window.history.back()}
           className="absolute left-5 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"
         >
           <ArrowLeft className="w-4 h-4 text-slate-600" />

@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useAppSearchParams } from "@/hooks/useAppSearchParams";
 import { Search, X, ChevronRight, Plus, Minus, Store, Check, ShieldCheck, User as UserIcon } from "lucide-react";
 import type { AdminUserItem, AdminUserDetail } from "@packages/contract";
 import type { ApiResponse } from "@packages/contract";
-import { fetchUsers, fetchUserDetail, adjustBalance, updateUserRole } from "@/services/adminUsersApi";
+import {
+  fetchUsersApi,
+  fetchUserDetailApi,
+  adjustBalanceApi,
+  updateUserRoleApi,
+} from "@/features/users/services/userService";
 import { getCurrentUser } from "@/libs/session";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
 import { formatDate, formatRupiah } from "@/utils/format";
@@ -69,7 +74,7 @@ function UserDetailModal({
   const isSuperadminViewer = getCurrentUser()?.role === "superadmin";
 
   useEffect(() => {
-    fetchUserDetail(userId)
+    fetchUserDetailApi(userId)
       .then(setDetail)
       .finally(() => setLoading(false));
   }, [userId]);
@@ -79,7 +84,7 @@ function UserDetailModal({
     setRoleSubmitting(true);
     setRoleError(null);
     try {
-      await updateUserRole(userId, pendingRole);
+      await updateUserRoleApi(userId, pendingRole);
       setDetail({ ...detail, role: pendingRole });
       setPendingRole(null);
       onBalanceChanged();
@@ -96,7 +101,7 @@ function UserDetailModal({
     if (!amount || amount <= 0) return;
     setAdjust((s) => ({ ...s, submitting: true, error: null }));
     try {
-      await adjustBalance(userId, adjust.type, amount, adjust.note || undefined);
+      await adjustBalanceApi(userId, adjust.type, amount, adjust.note || undefined);
       setAdjust((s) => ({ ...s, done: true, submitting: false }));
       onBalanceChanged();
       if (detail)
@@ -362,7 +367,7 @@ function UserDetailModal({
 }
 
 export default function UsersPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useAppSearchParams();
 
   const offset = Number(searchParams.get("offset") ?? "0");
   const q = searchParams.get("q") ?? "";
@@ -379,7 +384,7 @@ export default function UsersPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchUsers(offset, q);
+      const res = await fetchUsersApi({ offset, q });
       setUsers((prev) => (isAppend ? [...prev, ...res.data] : res.data));
       setPage(res.page);
     } catch (err) {

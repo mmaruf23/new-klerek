@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { routes } from "@/routes";
 import type { Summary } from "@packages/contract";
 import { ChevronRight, Download, CalendarDays, Users, Receipt, Package, Gift } from "lucide-react";
@@ -13,13 +13,13 @@ export default function SummaryPage() {
   useEffect(() => {
     const raw = sessionStorage.getItem("klerek_summary");
     if (!raw) {
-      navigate(routes.home);
+      navigate({ to: routes.home });
       return;
     }
     try {
       setSummary(JSON.parse(raw) as Summary);
     } catch {
-      navigate(routes.home);
+      navigate({ to: routes.home });
     } finally {
       setLoading(false);
     }
@@ -153,7 +153,7 @@ export default function SummaryPage() {
               Ekspor PDF
             </button>
             <button
-              onClick={() => navigate(routes.home)}
+              onClick={() => navigate({ to: routes.home })}
               className="flex items-center gap-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-2 rounded-lg transition-colors"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

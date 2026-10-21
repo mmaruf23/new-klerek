@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
+import { useAppSearchParams } from "@/hooks/useAppSearchParams";
 import { routes } from "@/routes";
 import {
   Bell,
@@ -14,15 +15,16 @@ import {
 } from "lucide-react";
 import {
   STORE_PAGE_LIMIT,
-  fetchStorePage,
-  parseStoreStatus,
-  subscribeStore,
-  type StoreListData,
-  type StoreStatusFilter,
-} from "@/services/adminApi";
+  fetchStorePageApi,
+  subscribeStoreApi,
+} from "@/features/dashboard/services/storeService";
+import type {
+  StoreListData,
+  StoreStatusFilter,
+} from "@/features/dashboard/types";
 import { dataPrice, type StoreResponse } from "@packages/contract";
 import { getCurrentUser } from "@/libs/session";
-import { logout } from "@/services/authApi";
+import { logoutApi } from "@/features/auth/services/authService";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
 import { formatDate, formatRupiah } from "@/utils/format";
 import {
@@ -43,7 +45,6 @@ const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] 
 ];
 
 const STATUS_LABEL: Record<StoreStatusFilter, string> = { active: "aktif", expired: "expired" };
-const DUMMY_TX = [184, 64, 412, 0, 91, 23, 156, 307, 55, 228];
 
 function SkeletonStoreItem() {
   return (
@@ -61,9 +62,13 @@ function SkeletonStoreItem() {
   );
 }
 
+export function parseStoreStatus(value: string | null): StoreStatusFilter | undefined {
+  return value === "active" || value === "expired" ? value : undefined;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useAppSearchParams();
 
   const q = searchParams.get("q") ?? "";
   const status = parseStoreStatus(searchParams.get("status"));
@@ -78,11 +83,11 @@ export default function DashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchStorePage({ q: q || undefined, status, offset });
+      const res = await fetchStorePageApi({ q: q || undefined, status, offset });
       setStores(res);
     } catch (err) {
       if (err instanceof Response && err.status >= 300 && err.status < 400) {
-        if (config.ENV == "production") navigate(routes.authLogin);
+        if (config.ENV == "production") navigate({ to: routes.authLogin });
         return;
       }
       setError("Gagal memuat data toko.");
@@ -124,7 +129,7 @@ export default function DashboardPage() {
     setSubmitting(true);
     setSubResult(null);
     try {
-      const result = await subscribeStore(modalStore.id, selectedPkg);
+      const result = await subscribeStoreApi(modalStore.id, selectedPkg);
       const exp = formatDate(result.subscription.expiresAt);
       setSubResult({ ok: true, msg: `Subscription berhasil! Aktif hingga ${exp}.` });
     } catch (err) {
@@ -185,8 +190,8 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={async () => {
-                await logout();
-                navigate(routes.authLogin);
+                await logoutApi();
+                navigate({ to: routes.authLogin });
               }}
               className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm hover:bg-indigo-600 transition-colors"
               title="Keluar"
@@ -317,11 +322,10 @@ export default function DashboardPage() {
             </div>
 
             <div className="divide-y divide-slate-100">
-              {stores.data.map((store, idx) => {
+              {stores.data.map((store) => {
                 const subStatus = getSubStatus(store.subs);
                 const avatarColor = getAvatarColor(store.id);
                 const subLabel = getSubLabel(store.subs);
-                const txCount = DUMMY_TX[idx % DUMMY_TX.length];
                 const expiryText = formatExpiryRelative(store.subs);
 
                 return (
@@ -372,7 +376,6 @@ export default function DashboardPage() {
                           {subStatus === "aktif" ? "Aktif" : subStatus === "trial" ? "Trial" : "Habis"}
                         </span>
                       </div>
-                      <span className="text-xs text-slate-400 mt-0.5">{txCount} tx</span>
                     </div>
 
                     <div className="flex justify-end shrink-0">

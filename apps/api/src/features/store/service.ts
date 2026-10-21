@@ -1,6 +1,6 @@
 import { and, count, desc, eq, exists, gt, ilike, max, not, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { store, subscription, users, balance, type StoreInsert, User } from "../../db/schema.js";
+import { store, subscription, users, balance, type StoreInsert, type User } from "../../db/schema.js";
 import { Exception } from "../../error.js";
 import type { StoreResponse } from "@packages/contract";
 import { dataPrice } from "../subscription/data.js";

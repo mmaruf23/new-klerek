@@ -1,7 +1,7 @@
 import { routes } from "@/routes";
 import { getCurrentUser } from "@/libs/session";
 import { Store, User, Users } from "lucide-react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 
 const AdminLayout = () => {
   const location = useLocation();
