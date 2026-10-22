@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient";
-import { getAccessToken } from "@/libs/session";
+import { getAccessToken } from "@/lib/session";
 import type { AdminUserDetail, UserQuery, UsersListData } from "../types";
 
 export async function fetchUsersApi({

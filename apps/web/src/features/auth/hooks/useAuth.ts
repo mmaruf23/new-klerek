@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { setAccessToken } from "@/libs/session";
+import { setAccessToken } from "@/lib/session";
 import type { LoginAuthInput } from "../types";
 import {
   loginWithGoogleApi,

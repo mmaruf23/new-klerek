@@ -1,8 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import type { JwtClaims } from "@packages/contract";
-import { refreshAccessToken } from "@/libs/http";
-import { getClaims } from "@/libs/session";
-import { routes } from "@/routes";
+import { refreshAccessToken } from "@/features/auth/services/authService";
+import { getClaims } from "@/lib/session";
 import { config } from "@/config";
 
 export async function getClaimsOrRefresh(): Promise<JwtClaims | null> {
@@ -18,7 +17,7 @@ export async function requireAuthGuard() {
   if (config.ENV !== "production") return;
   const claims = await getClaimsOrRefresh();
   if (!claims) {
-    throw redirect({ to: routes.authLogin });
+    throw redirect({ to: "/auth/login" });
   }
   return claims;
 }
@@ -26,10 +25,10 @@ export async function requireAuthGuard() {
 export async function requireSuperadminGuard() {
   const claims = await getClaimsOrRefresh();
   if (!claims) {
-    throw redirect({ to: routes.authLogin });
+    throw redirect({ to: "/auth/login" });
   }
   if (claims.role !== "superadmin") {
-    throw redirect({ to: routes.dashboard });
+    throw redirect({ to: "/dashboard" });
   }
   return claims;
 }
@@ -37,6 +36,6 @@ export async function requireSuperadminGuard() {
 export async function redirectIfAuthenticatedGuard() {
   const claims = getClaims();
   if (claims) {
-    throw redirect({ to: routes.dashboard });
+    throw redirect({ to: "/dashboard" });
   }
 }

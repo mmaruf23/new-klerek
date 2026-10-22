@@ -23,7 +23,7 @@ import type {
   StoreStatusFilter,
 } from "@/features/dashboard/types";
 import { dataPrice, type StoreResponse } from "@packages/contract";
-import { getCurrentUser } from "@/libs/session";
+import { getCurrentUser } from "@/lib/session";
 import { logoutApi } from "@/features/auth/services/authService";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
 import { formatDate, formatRupiah } from "@/utils/format";
@@ -36,7 +36,7 @@ import {
   getSubStatus,
 } from "@/utils/subscription";
 import { config } from "@/config";
-import { cn } from "@/libs/utils";
+import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
   { label: "Semua", value: undefined },

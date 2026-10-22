@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/apiClient";
 import { config } from "@/config";
-import { getAccessToken, clearSession } from "@/libs/session";
+import { getAccessToken, clearSession } from "@/lib/session";
 import type { StoreQuery, StoreListData, SubscribeResult } from "../types";
 
 export const STORE_PAGE_LIMIT = config.STORE_PAGE_LIMIT;

@@ -9,7 +9,7 @@ import {
   adjustBalanceApi,
   updateUserRoleApi,
 } from "@/features/users/services/userService";
-import { getCurrentUser } from "@/libs/session";
+import { getCurrentUser } from "@/lib/session";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
 import { formatDate, formatRupiah } from "@/utils/format";
 

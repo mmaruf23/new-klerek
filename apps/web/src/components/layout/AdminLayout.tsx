@@ -1,5 +1,5 @@
 import { routes } from "@/routes";
-import { getCurrentUser } from "@/libs/session";
+import { getCurrentUser } from "@/lib/session";
 import { Store, User, Users } from "lucide-react";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 

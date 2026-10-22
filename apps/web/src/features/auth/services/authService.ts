@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient";
-import { clearSession, getAccessToken } from "@/libs/session";
+import { clearSession, getAccessToken, setAccessToken } from "@/lib/session";
 import type { LoginAuthInput, LoginResponse, ProfileResponse } from "../types";
 
 export async function loginWithGoogleApi(credential: string): Promise<LoginResponse> {
@@ -34,6 +34,27 @@ export async function logoutApi(): Promise<void> {
   } finally {
     clearSession();
   }
+}
+
+async function refreshTokenApi(): Promise<string | null> {
+  try {
+    const res = await apiClient.auth.refresh.$post({});
+    const json = await res.json();
+    if (!json.success || !json.data) return null;
+    setAccessToken(json.data.token);
+    return json.data.token;
+  } catch {
+    return null;
+  }
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+
+export function refreshAccessToken(): Promise<string | null> {
+  refreshPromise ??= refreshTokenApi().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
 }
 
 export async function getProfileApi(): Promise<ProfileResponse> {
