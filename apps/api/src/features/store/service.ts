@@ -16,33 +16,46 @@ interface PageQuery {
 
 interface UserQuery {
   userId?: string;
-  role?: User['role']
+  role?: User["role"];
 }
 
 export const countStore = async ({ userId, role }: Required<UserQuery>) => {
-  const isSuperAdmin = role === 'superadmin'
+  const isSuperAdmin = role === "superadmin";
 
-  const storeSubscriptions = db.$with('store_subs').as(
-    db.select({
-      storeId: subscription.storeId,
-      isTrial: max(subscription.isTrial).as('isTrial'), // Bungkus aggregate atau sesuaikan
-      lastSubs: max(subscription.expiresAt).as('lastSubscription')
-    }).from(subscription).groupBy(subscription.storeId)
+  const storeSubscriptions = db.$with("store_subs").as(
+    db
+      .select({
+        storeId: subscription.storeId,
+        // True jika di tabel subscription ada minimal satu data yang isTrial-nya true
+        isTrial: sql`bool_or(${subscription.isTrial})`.as("isTrial"),
+        lastSubs: max(subscription.expiresAt).as("lastSubscription"),
+      })
+      .from(subscription)
+      .groupBy(subscription.storeId),
   );
 
-  const [result] = await db.select({
-    total: count(), 
-    active: count(sql`case when ${storeSubscriptions.lastSubs} >= NOW() then 1 end`),
-    trial: count(sql`case when ${storeSubscriptions.lastSubs} >= NOW() and ${storeSubscriptions.isTrial} = true then 1 end`),
-    expired: count(sql`case when ${storeSubscriptions.lastSubs} < NOW() then 1 end`),
-  })
-  .from(store)
-  .leftJoin(storeSubscriptions, eq(store.id, storeSubscriptions.storeId))
-  .leftJoin(users, eq(users.refferalCode, store.referrerId))
-  .where(!isSuperAdmin ? eq(users.id, userId) : undefined) // Sesuaikan logika filternya
-  
-  return result
-}
+  try {
+    const [result] = await db
+      .with(storeSubscriptions)
+      .select({
+        total: count(),
+        active: count(sql`case when ${storeSubscriptions.lastSubs} >= NOW() then 1 end`),
+        trial: count(
+          sql`case when ${storeSubscriptions.lastSubs} >= NOW() and ${storeSubscriptions.isTrial} = true then 1 end`,
+        ),
+        expired: count(sql`case when ${storeSubscriptions.lastSubs} < NOW() then 1 end`),
+      })
+      .from(store)
+      .leftJoin(storeSubscriptions, eq(store.id, storeSubscriptions.storeId))
+      .leftJoin(users, eq(users.refferalCode, store.referrerId))
+      .where(!isSuperAdmin ? eq(users.id, userId) : undefined);
+
+    return result;
+  } catch (error) {
+    console.log(error);
+    if (error instanceof Error) throw Exception.ServerError();
+  }
+};
 
 export const getAllStore = async ({ limit, offset, search, status, userId }: UserQuery & PageQuery) => {
   const empty = { data: [], total: 0, limit, offset, hasNext: false };
