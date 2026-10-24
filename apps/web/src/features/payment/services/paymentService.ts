@@ -1,9 +1,8 @@
 import { apiClient } from "@/lib/apiClient";
-import type { GeneratePaymentInput, PaymentResponse } from "@packages/contract";
+import type { GeneratePaymentInput } from "../types/request";
+import type { PaymentResponse } from "../types/response";
 
-export type Payment = PaymentResponse;
-
-export async function generateQrisApi(input: GeneratePaymentInput): Promise<Payment> {
+export async function generateQrisApi(input: GeneratePaymentInput): Promise<PaymentResponse> {
   const res = await apiClient.payment.generate.$post({
     json: input,
   });
@@ -12,10 +11,10 @@ export async function generateQrisApi(input: GeneratePaymentInput): Promise<Paym
   if (!json.success || !json.data) {
     throw new Error(json.message ?? "Gagal membuat QRIS");
   }
-  return json.data as unknown as Payment;
+  return json.data as unknown as PaymentResponse;
 }
 
-export async function checkPaymentApi(invoiceId: string): Promise<Payment> {
+export async function checkPaymentApi(invoiceId: string): Promise<PaymentResponse> {
   const res = await apiClient.payment[":invoiceId"].$get({
     param: { invoiceId },
   });
@@ -24,6 +23,5 @@ export async function checkPaymentApi(invoiceId: string): Promise<Payment> {
   if (!json.success || !json.data) {
     throw new Error(json.message ?? "Gagal cek status pembayaran");
   }
-  return json.data as unknown as Payment;
+  return json.data as unknown as PaymentResponse;
 }
-

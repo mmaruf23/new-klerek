@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { GeneratePaymentInput } from "@packages/contract";
 import { generateQrisApi, checkPaymentApi } from "../services/paymentService";
+import type { GeneratePaymentInput } from "../types/request";
 
 export function useGenerateQrisMutation() {
   return useMutation({

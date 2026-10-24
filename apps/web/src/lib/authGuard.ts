@@ -1,5 +1,5 @@
 import { redirect } from "@tanstack/react-router";
-import type { JwtClaims } from "@packages/contract";
+import type { JwtClaims } from "@apps/api";
 import { refreshAccessToken } from "@/features/auth/services/authService";
 import { getClaims } from "@/lib/session";
 import { config } from "@/config";

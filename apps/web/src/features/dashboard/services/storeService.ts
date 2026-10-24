@@ -1,15 +1,11 @@
 import { apiClient } from "@/lib/apiClient";
 import { config } from "@/config";
 import { getAccessToken, clearSession } from "@/lib/session";
-import type { StoreQuery, StoreListData, SubscribeResult } from "../types";
+import type { StoreQuery, SubscribeResult } from "../types";
 
 export const STORE_PAGE_LIMIT = config.STORE_PAGE_LIMIT;
 
-export async function fetchStorePageApi({
-  q,
-  status,
-  offset = 0,
-}: StoreQuery): Promise<StoreListData> {
+export async function fetchStorePageApi({ q, status, offset = 0 }: StoreQuery) {
   const token = getAccessToken();
   const res = await apiClient.store.$get(
     {
@@ -36,14 +32,12 @@ export async function fetchStorePageApi({
   }
 
   return {
-    data: json.data as unknown as StoreListData["data"],
+    data: json.data,
     page: json.page,
   };
 }
 
-export async function fetchStorePublicApi(
-  id: string,
-): Promise<{ id: string; name: string }> {
+export async function fetchStorePublicApi(id: string): Promise<{ id: string; name: string }> {
   const res = await apiClient.store.lookup[":id"].$get({
     param: { id },
   });
@@ -69,10 +63,7 @@ export async function submitReferralApi(
   return json.data;
 }
 
-export async function subscribeStoreApi(
-  storeId: string,
-  packageIndex: number,
-): Promise<SubscribeResult> {
+export async function subscribeStoreApi(storeId: string, packageIndex: number): Promise<SubscribeResult> {
   const token = getAccessToken();
   const storeClient = apiClient.store as any;
   const res = await storeClient[":id"].subscribe.$post(

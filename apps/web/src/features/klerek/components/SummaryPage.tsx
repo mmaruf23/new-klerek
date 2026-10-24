@@ -1,8 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { Summary } from "@packages/contract";
 import { ChevronRight, Download, CalendarDays, Users, Receipt, Package, Gift } from "lucide-react";
 import { formatDateWithDay, formatRupiah } from "@/utils/format";
 import { useState, useEffect } from "react";
+import type { Summary } from "../types/response";
 
 export default function SummaryPage() {
   const navigate = useNavigate();

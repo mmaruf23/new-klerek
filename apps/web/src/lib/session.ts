@@ -1,5 +1,5 @@
-import type { JwtClaims } from "@packages/contract";
 import { config } from "@/config";
+import type { JwtClaims } from "@apps/api";
 
 const { ACCESS_TOKEN_KEY } = config;
 

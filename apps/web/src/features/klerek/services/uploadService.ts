@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient";
-import type { Summary } from "@packages/contract";
+import type { Summary } from "../types/response";
 
 export async function uploadPosFileApi(file: File): Promise<Summary> {
   const res = await apiClient.index.$post({

@@ -1,29 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
-import { dataPrice } from '@packages/contract';
-import type { Summary } from '@packages/contract';
-import { generateQrisApi, checkPaymentApi, type Payment } from '@/features/payment/services/paymentService';
-import { fetchStorePublicApi } from '@/features/dashboard/services/storeService';
-import { QRCodeCanvas } from 'qrcode.react';
-import { ArrowLeft, CheckCircle, Download, Info, Mail, QrCode, Search, Zap } from 'lucide-react';
-import { useCountdown } from '@/hooks/useCountdown';
-import { formatRupiah } from '@/utils/format';
-import { formatPerDayPrice, formatProjectedRange, packageDays } from '@/utils/subscription';
+import { useEffect, useRef, useState } from "react";
+import { generateQrisApi, checkPaymentApi } from "@/features/payment/services/paymentService";
+import { fetchStorePublicApi } from "@/features/dashboard/services/storeService";
+import { QRCodeCanvas } from "qrcode.react";
+import { ArrowLeft, CheckCircle, Download, Info, Mail, QrCode, Search, Zap } from "lucide-react";
+import { useCountdown } from "@/hooks/useCountdown";
+import { formatRupiah } from "@/utils/format";
+import { formatPerDayPrice, formatProjectedRange, packageDays } from "@/features/payment/utils/subscription";
+import { dataPrice } from "../../../constant";
+import type { PaymentResponse } from "../types/response";
 
 const INFO_SECTIONS = [
   {
     icon: <Info className="w-5 h-5 text-indigo-500" />,
-    title: 'Bagaimana akses bekerja?',
-    desc: 'Akses melekat ke toko, bukan akun. Selama paket aktif, siapapun yang punya file ekspor toko itu bisa upload & lihat rekap.',
+    title: "Bagaimana akses bekerja?",
+    desc: "Akses melekat ke toko, bukan akun. Selama paket aktif, siapapun yang punya file ekspor toko itu bisa upload & lihat rekap.",
   },
   {
     icon: <Zap className="w-5 h-5 text-indigo-500" />,
-    title: 'Toko baru?',
-    desc: '2 minggu trial otomatis aktif saat upload pertama. Tidak perlu daftar.',
+    title: "Toko baru?",
+    desc: "2 minggu trial otomatis aktif saat upload pertama. Tidak perlu daftar.",
   },
   {
     icon: <QrCode className="w-5 h-5 text-indigo-500" />,
-    title: 'Bayar dengan apa?',
-    desc: 'QRIS — satu kode untuk semua bank dan e-wallet. Status terverifikasi otomatis.',
+    title: "Bayar dengan apa?",
+    desc: "QRIS — satu kode untuk semua bank dan e-wallet. Status terverifikasi otomatis.",
   },
 ];
 
@@ -34,16 +34,16 @@ type StoreRef = { id: string; name: string };
 // Default toko diambil dari summary upload terakhir (jika ada)
 function getStoreFromSession(): StoreRef | null {
   try {
-    const raw = sessionStorage.getItem('klerek_summary');
+    const raw = sessionStorage.getItem("klerek_summary");
     if (!raw) return null;
-    const s = JSON.parse(raw) as Summary;
+    const s = JSON.parse(raw) as { store_id: string; store_name: string | undefined };
     return s.store_id ? { id: s.store_id, name: s.store_name ?? s.store_id } : null;
   } catch {
     return null;
   }
 }
 
-type PollStatus = 'polling' | 'paid' | 'expired';
+type PollStatus = "polling" | "paid" | "expired";
 
 // ── QRIS full-screen view ────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ function QrisView({
   onBack,
   onCheckNow,
 }: {
-  payment: Payment;
+  payment: PaymentResponse;
   pkgIdx: number;
   storeName: string;
   pollStatus: PollStatus | null;
@@ -70,10 +70,10 @@ function QrisView({
 
   // QR di-render lokal dari qr_string Saweria — simpan = export canvas ke PNG
   const handleSaveQr = () => {
-    const canvas = qrRef.current?.querySelector('canvas');
+    const canvas = qrRef.current?.querySelector("canvas");
     if (!canvas) return;
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
     a.download = `qris-${payment.invoiceId}.png`;
     a.click();
   };
@@ -82,13 +82,14 @@ function QrisView({
     <div className="bg-white rounded-3xl p-5 shadow-2xl">
       <div className="flex items-center justify-between mb-4">
         <span className="text-red-600 font-black text-lg tracking-tight">QRIS</span>
-        <span className="text-[10px] text-slate-400 font-medium tracking-wider">
-          SATU QR · SEMUA BANK
-        </span>
+        <span className="text-[10px] text-slate-400 font-medium tracking-wider">SATU QR · SEMUA BANK</span>
       </div>
 
       {payment.qrString ? (
-        <div ref={qrRef} className="w-full aspect-square rounded-xl flex items-center justify-center [&>canvas]:w-full! [&>canvas]:h-full!">
+        <div
+          ref={qrRef}
+          className="w-full aspect-square rounded-xl flex items-center justify-center [&>canvas]:w-full! [&>canvas]:h-full!"
+        >
           <QRCodeCanvas value={payment.qrString} size={512} level="M" includeMargin />
         </div>
       ) : (
@@ -98,9 +99,7 @@ function QrisView({
       )}
 
       <div className="flex items-center justify-between mt-4">
-        <p className="text-[10px] text-slate-400 font-mono truncate max-w-35">
-          {payment.invoiceId}
-        </p>
+        <p className="text-[10px] text-slate-400 font-mono truncate max-w-35">{payment.invoiceId}</p>
         <button
           onClick={handleSaveQr}
           disabled={!payment.qrString}
@@ -113,33 +112,34 @@ function QrisView({
     </div>
   );
 
-  const resultContent = pollStatus === 'paid' ? (
-    <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-6 py-12">
-      <CheckCircle className="w-20 h-20 text-emerald-400" />
-      <h2 className="text-2xl font-bold text-white">Pembayaran Berhasil!</h2>
-      <p className="text-white/60 max-w-xs">Subscription toko Anda sudah diperbarui. Selamat berjualan!</p>
-      <button
-        onClick={onBack}
-        className="mt-2 px-8 py-3 rounded-full bg-indigo-500 text-white font-semibold text-sm hover:bg-indigo-400 transition-colors"
-      >
-        Kembali ke Paket
-      </button>
-    </div>
-  ) : pollStatus === 'expired' ? (
-    <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-6 py-12">
-      <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center">
-        <span className="text-red-400 text-5xl leading-none">✕</span>
+  const resultContent =
+    pollStatus === "paid" ? (
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-6 py-12">
+        <CheckCircle className="w-20 h-20 text-emerald-400" />
+        <h2 className="text-2xl font-bold text-white">Pembayaran Berhasil!</h2>
+        <p className="text-white/60 max-w-xs">Subscription toko Anda sudah diperbarui. Selamat berjualan!</p>
+        <button
+          onClick={onBack}
+          className="mt-2 px-8 py-3 rounded-full bg-indigo-500 text-white font-semibold text-sm hover:bg-indigo-400 transition-colors"
+        >
+          Kembali ke Paket
+        </button>
       </div>
-      <h2 className="text-2xl font-bold text-white">QRIS Kedaluwarsa</h2>
-      <p className="text-white/60 max-w-xs">Silakan pilih paket kembali untuk membuat QRIS baru.</p>
-      <button
-        onClick={onBack}
-        className="mt-2 px-8 py-3 rounded-full bg-white text-slate-900 font-semibold text-sm hover:bg-white/90 transition-colors"
-      >
-        Pilih Ulang Paket
-      </button>
-    </div>
-  ) : null;
+    ) : pollStatus === "expired" ? (
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-6 py-12">
+        <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center">
+          <span className="text-red-400 text-5xl leading-none">✕</span>
+        </div>
+        <h2 className="text-2xl font-bold text-white">QRIS Kedaluwarsa</h2>
+        <p className="text-white/60 max-w-xs">Silakan pilih paket kembali untuk membuat QRIS baru.</p>
+        <button
+          onClick={onBack}
+          className="mt-2 px-8 py-3 rounded-full bg-white text-slate-900 font-semibold text-sm hover:bg-white/90 transition-colors"
+        >
+          Pilih Ulang Paket
+        </button>
+      </div>
+    ) : null;
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0d1b3e] flex flex-col">
@@ -182,10 +182,10 @@ function QrisView({
             <div className="mb-6">
               <div className="flex items-center gap-1.5 text-white/50 text-xs mb-3">
                 <QrCode className="w-3.5 h-3.5 shrink-0" />
-                <span>Untuk toko: {storeName || 'Toko Anda'}</span>
+                <span>Untuk toko: {storeName || "Toko Anda"}</span>
               </div>
               <p className="text-white/70 text-base font-medium">Paket {pkg?.name}</p>
-              <p className="text-white font-bold text-4xl mt-0.5">{pkg ? formatRupiah(pkg.price) : ''}</p>
+              <p className="text-white font-bold text-4xl mt-0.5">{pkg ? formatRupiah(pkg.price) : ""}</p>
             </div>
 
             {/* QRIS card */}
@@ -194,7 +194,9 @@ function QrisView({
             {/* Timer */}
             <div className="flex items-center justify-between mt-5 px-1">
               <p className="text-white/50 text-sm">QR berlaku selama</p>
-              <p className="text-white font-bold text-2xl font-mono tracking-[0.2em]">{m} : {s}</p>
+              <p className="text-white font-bold text-2xl font-mono tracking-[0.2em]">
+                {m} : {s}
+              </p>
             </div>
           </div>
 
@@ -206,20 +208,18 @@ function QrisView({
             >
               Saya sudah bayar · Cek status
             </button>
-            <p className="text-center text-white/40 text-xs mt-2">
-              Status diperiksa otomatis tiap 5 detik
-            </p>
+            <p className="text-center text-white/40 text-xs mt-2">Status diperiksa otomatis tiap 5 detik</p>
           </div>
 
           {/* Desktop two-column layout */}
           <div className="hidden md:flex flex-1 items-center justify-center gap-10 px-16 py-10">
             {/* Left */}
             <div className="w-full max-w-md">
-              <p className="text-xs font-bold tracking-widest text-indigo-400 uppercase mb-4">
-                Konfirmasi Pembayaran
-              </p>
+              <p className="text-xs font-bold tracking-widest text-indigo-400 uppercase mb-4">Konfirmasi Pembayaran</p>
               <h1 className="text-5xl font-bold text-white leading-tight mb-8">
-                Scan untuk<br />aktifkan akses.
+                Scan untuk
+                <br />
+                aktifkan akses.
               </h1>
 
               <div className="bg-white/10 backdrop-blur rounded-2xl p-5 text-white">
@@ -229,7 +229,7 @@ function QrisView({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-white/50 mb-0.5">Untuk toko</p>
-                    <p className="font-semibold truncate">{storeName || 'Toko Anda'}</p>
+                    <p className="font-semibold truncate">{storeName || "Toko Anda"}</p>
                   </div>
                   <span className="text-xs bg-white/10 text-white/60 px-2.5 py-1 rounded-full shrink-0">
                     Pay-as-you-go
@@ -240,18 +240,17 @@ function QrisView({
                     <p className="font-semibold">Paket {pkg?.name}</p>
                     <p className="text-xs text-white/50 mt-0.5">{formatProjectedRange(totalDays)}</p>
                   </div>
-                  <p className="font-semibold">{pkg ? formatRupiah(pkg.price) : ''}</p>
+                  <p className="font-semibold">{pkg ? formatRupiah(pkg.price) : ""}</p>
                 </div>
                 <div className="pt-4 flex items-center justify-between">
                   <p className="text-sm text-white/60">Total bayar</p>
-                  <p className="text-xl font-bold">{pkg ? formatRupiah(pkg.price) : ''}</p>
+                  <p className="text-xl font-bold">{pkg ? formatRupiah(pkg.price) : ""}</p>
                 </div>
               </div>
 
               <p className="mt-4 text-sm text-white/40">
-                QR berlaku selama{' '}
-                <span className="text-white font-semibold font-mono">{countdownStr}</span>
-                {' '}· status diperiksa otomatis
+                QR berlaku selama <span className="text-white font-semibold font-mono">{countdownStr}</span> · status
+                diperiksa otomatis
               </p>
             </div>
 
@@ -275,35 +274,43 @@ function QrisView({
 // ── Package selection view ───────────────────────────────────────────────────
 
 export default function MembershipPage() {
-  const [view, setView] = useState<'packages' | 'qris'>('packages');
+  const [view, setView] = useState<"packages" | "qris">("packages");
   const [selectedPkg, setSelectedPkg] = useState(4);
   const [loading, setLoading] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<PaymentResponse | null>(null);
   const [pollStatus, setPollStatus] = useState<PollStatus | null>(null);
   const [resolvedStore, setResolvedStore] = useState<StoreRef | null>(getStoreFromSession);
-  const [storeInput, setStoreInput] = useState('');
+  const [storeInput, setStoreInput] = useState("");
   const [storeInputLoading, setStoreInputLoading] = useState(false);
-  const [storeInputError, setStoreInputError] = useState('');
+  const [storeInputError, setStoreInputError] = useState("");
   // Email wajib untuk Saweria — dipakai sebagai identitas donatur
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = () => {
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
   };
 
   useEffect(() => {
-    if (pollStatus !== 'polling' || !payment) return;
+    if (pollStatus !== "polling" || !payment) return;
     intervalRef.current = setInterval(async () => {
       try {
         const updated = await checkPaymentApi(payment.invoiceId);
-        if (updated.status === 'paid') { setPollStatus('paid'); stopPolling(); }
-        else if (updated.status === 'expired' || updated.status === 'failed') {
-          setPollStatus('expired'); stopPolling();
+        if (updated.status === "paid") {
+          setPollStatus("paid");
+          stopPolling();
+        } else if (updated.status === "expired" || updated.status === "failed") {
+          setPollStatus("expired");
+          stopPolling();
         }
-      } catch { /* keep polling on transient errors */ }
+      } catch {
+        /* keep polling on transient errors */
+      }
     }, 5000);
     return stopPolling;
   }, [pollStatus, payment]);
@@ -312,22 +319,27 @@ export default function MembershipPage() {
     if (!payment) return;
     try {
       const updated = await checkPaymentApi(payment.invoiceId);
-      if (updated.status === 'paid') { setPollStatus('paid'); stopPolling(); }
-      else if (updated.status === 'expired' || updated.status === 'failed') {
-        setPollStatus('expired'); stopPolling();
+      if (updated.status === "paid") {
+        setPollStatus("paid");
+        stopPolling();
+      } else if (updated.status === "expired" || updated.status === "failed") {
+        setPollStatus("expired");
+        stopPolling();
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const handlePilih = async (idx: number) => {
     if (!resolvedStore) {
-      setError('Masukkan ID toko terlebih dahulu.');
+      setError("Masukkan ID toko terlebih dahulu.");
       setSelectedPkg(idx);
       return;
     }
     const trimmedEmail = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setEmailError('Masukkan email yang valid');
+      setEmailError("Masukkan email yang valid");
       setSelectedPkg(idx);
       return;
     }
@@ -337,10 +349,10 @@ export default function MembershipPage() {
       const result = await generateQrisApi({ storeId: resolvedStore.id, packageIndex: idx, email: trimmedEmail });
       setPayment(result);
       setSelectedPkg(idx);
-      setPollStatus('polling');
-      setView('qris');
+      setPollStatus("polling");
+      setView("qris");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan";
       setError(msg);
     } finally {
       setLoading(null);
@@ -350,15 +362,18 @@ export default function MembershipPage() {
   const handleLookupStore = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = storeInput.trim().toUpperCase();
-    if (id.length !== 4) { setStoreInputError('ID toko harus 4 karakter'); return; }
+    if (id.length !== 4) {
+      setStoreInputError("ID toko harus 4 karakter");
+      return;
+    }
     setStoreInputLoading(true);
-    setStoreInputError('');
+    setStoreInputError("");
     try {
       const data = await fetchStorePublicApi(id);
       setResolvedStore(data);
-      setStoreInput('');
+      setStoreInput("");
     } catch (err) {
-      setStoreInputError(err instanceof Error ? err.message : 'Toko tidak ditemukan');
+      setStoreInputError(err instanceof Error ? err.message : "Toko tidak ditemukan");
     } finally {
       setStoreInputLoading(false);
     }
@@ -368,21 +383,24 @@ export default function MembershipPage() {
     stopPolling();
     setPayment(null);
     setPollStatus(null);
-    setView('packages');
+    setView("packages");
   };
 
-  const renderEmailInput = (className = '') => (
+  const renderEmailInput = (className = "") => (
     <div className={className}>
       <div className="relative">
         <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="email"
           value={email}
-          onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setEmailError("");
+          }}
           placeholder="Email Anda (untuk bukti pembayaran)"
           autoComplete="email"
           className={`w-full text-sm text-black border rounded-xl pl-9 pr-3 py-2.5 outline-none bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-100 ${
-            emailError ? 'border-red-400 focus:border-red-400' : 'border-slate-200 focus:border-indigo-400'
+            emailError ? "border-red-400 focus:border-red-400" : "border-slate-200 focus:border-indigo-400"
           }`}
         />
       </div>
@@ -390,12 +408,12 @@ export default function MembershipPage() {
     </div>
   );
 
-  if (view === 'qris' && payment) {
+  if (view === "qris" && payment) {
     return (
       <QrisView
         payment={payment}
         pkgIdx={selectedPkg}
-        storeName={resolvedStore?.name ?? ''}
+        storeName={resolvedStore?.name ?? ""}
         pollStatus={pollStatus}
         onBack={handleBack}
         onCheckNow={handleCheckNow}
@@ -405,7 +423,6 @@ export default function MembershipPage() {
 
   return (
     <div className="pb-28 md:pb-0 md:py-16">
-
       {/* ── Mobile header ── */}
       <div className="md:hidden flex items-center justify-center px-5 pt-2 pb-4 relative">
         <button
@@ -422,9 +439,8 @@ export default function MembershipPage() {
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Bayar sesuai pakai.</h1>
         {resolvedStore ? (
           <p className="text-slate-500 text-sm">
-            Aktifkan untuk toko{' '}
-            <span className="font-semibold text-slate-800">{resolvedStore.name}</span>.{' '}
-            Tanpa langganan otomatis.
+            Aktifkan untuk toko <span className="font-semibold text-slate-800">{resolvedStore.name}</span>. Tanpa
+            langganan otomatis.
           </p>
         ) : (
           <p className="text-slate-500 text-sm">Tanpa langganan otomatis.</p>
@@ -437,7 +453,10 @@ export default function MembershipPage() {
           <form onSubmit={handleLookupStore} className="flex gap-2">
             <input
               value={storeInput}
-              onChange={(e) => { setStoreInput(e.target.value.toUpperCase()); setStoreInputError(''); }}
+              onChange={(e) => {
+                setStoreInput(e.target.value.toUpperCase());
+                setStoreInputError("");
+              }}
               maxLength={4}
               placeholder="ID toko (4 karakter)"
               className="flex-1 text-sm font-mono tracking-widest uppercase border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-400"
@@ -455,7 +474,7 @@ export default function MembershipPage() {
       )}
 
       {/* ── Mobile email input ── */}
-      {renderEmailInput('md:hidden px-5 mb-5')}
+      {renderEmailInput("md:hidden px-5 mb-5")}
 
       {/* ── Desktop: store badge / input ── */}
       <div className="hidden md:flex justify-center mb-4">
@@ -476,7 +495,10 @@ export default function MembershipPage() {
             <div className="flex items-center gap-2">
               <input
                 value={storeInput}
-                onChange={(e) => { setStoreInput(e.target.value.toUpperCase()); setStoreInputError(''); }}
+                onChange={(e) => {
+                  setStoreInput(e.target.value.toUpperCase());
+                  setStoreInputError("");
+                }}
                 maxLength={4}
                 placeholder="ID toko (4 karakter)"
                 className="w-44 text-center text-black text-sm font-mono tracking-widest uppercase border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-400"
@@ -501,7 +523,7 @@ export default function MembershipPage() {
         <p className="text-slate-500 text-base">
           Tanpa langganan otomatis. Aktifkan akses upload untuk satu toko, kapanpun butuh.
         </p>
-        {renderEmailInput('max-w-sm mx-auto mt-6 text-left')}
+        {renderEmailInput("max-w-sm mx-auto mt-6 text-left")}
       </div>
 
       {/* Error */}
@@ -521,49 +543,49 @@ export default function MembershipPage() {
               key={idx}
               onClick={() => setSelectedPkg(idx)}
               className={`flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all ${
-                isSelected
-                  ? 'border-indigo-500 bg-indigo-500'
-                  : 'border-slate-100 bg-white hover:border-slate-200'
+                isSelected ? "border-indigo-500 bg-indigo-500" : "border-slate-100 bg-white hover:border-slate-200"
               }`}
             >
               {/* Radio indicator */}
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                isSelected ? 'border-white bg-white' : 'border-slate-300'
-              }`}>
+              <div
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  isSelected ? "border-white bg-white" : "border-slate-300"
+                }`}
+              >
                 {isSelected && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
               </div>
 
               {/* Name + desc */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                  <span className={`font-semibold text-sm ${isSelected ? "text-white" : "text-slate-900"}`}>
                     {p.name}
                   </span>
                   {p.badge && (
-                    <span className={`text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full ${
-                      isSelected
-                        ? 'bg-white/25 text-white'
-                        : p.badge === 'POPULER'
-                          ? 'bg-indigo-100 text-indigo-600'
-                          : 'bg-slate-900 text-white'
-                    }`}>
+                    <span
+                      className={`text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full ${
+                        isSelected
+                          ? "bg-white/25 text-white"
+                          : p.badge === "POPULER"
+                            ? "bg-indigo-100 text-indigo-600"
+                            : "bg-slate-900 text-white"
+                      }`}
+                    >
                       {p.badge}
                     </span>
                   )}
                 </div>
-                <p className={`text-xs mt-0.5 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                <p className={`text-xs mt-0.5 ${isSelected ? "text-indigo-200" : "text-slate-400"}`}>
                   {p.desc} · {formatPerDayPrice(p.price, p.time, p.bonus)}
                 </p>
               </div>
 
               {/* Price + duration */}
               <div className="text-right shrink-0">
-                <p className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                <p className={`font-bold text-sm ${isSelected ? "text-white" : "text-slate-900"}`}>
                   {formatRupiah(p.price)}
                 </p>
-                <p className={`text-xs ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
-                  / {totalDays} hari
-                </p>
+                <p className={`text-xs ${isSelected ? "text-indigo-200" : "text-slate-400"}`}>/ {totalDays} hari</p>
               </div>
             </button>
           );
@@ -573,57 +595,57 @@ export default function MembershipPage() {
       {/* Mobile info note */}
       <div className="md:hidden flex items-start gap-2 px-5 mt-5 text-slate-400 text-xs">
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-        <span>
-          Selama paket aktif, siapapun yang pegang file ekspor toko ini bisa upload &amp; lihat rekap.
-        </span>
+        <span>Selama paket aktif, siapapun yang pegang file ekspor toko ini bisa upload &amp; lihat rekap.</span>
       </div>
 
       {/* ── Desktop: card scroll ── */}
       <div className="hidden md:block overflow-x-auto pb-4">
         <div className="flex gap-4 px-4 w-max mx-auto snap-x snap-mandatory">
           {dataPrice.map((p, idx) => {
-            const isPopular = p.badge === 'POPULER';
+            const isPopular = p.badge === "POPULER";
             return (
               <div
                 key={idx}
                 className={`shrink-0 w-44 flex flex-col rounded-3xl p-5 snap-start transition-all ${
                   isPopular
-                    ? 'bg-indigo-600 border-2 border-indigo-600 text-white shadow-lg shadow-indigo-200'
-                    : 'bg-white border-2 border-slate-100 text-slate-900 hover:border-slate-200'
+                    ? "bg-indigo-600 border-2 border-indigo-600 text-white shadow-lg shadow-indigo-200"
+                    : "bg-white border-2 border-slate-100 text-slate-900 hover:border-slate-200"
                 }`}
               >
                 <div className="h-6 flex items-center mb-3">
                   {p.badge && (
-                    <span className={`text-[9px] font-bold tracking-widest uppercase px-2 py-1 rounded-full ${
-                      isPopular ? 'bg-white text-indigo-600' : 'bg-slate-900 text-white'
-                    }`}>
+                    <span
+                      className={`text-[9px] font-bold tracking-widest uppercase px-2 py-1 rounded-full ${
+                        isPopular ? "bg-white text-indigo-600" : "bg-slate-900 text-white"
+                      }`}
+                    >
                       {p.badge}
                     </span>
                   )}
                 </div>
-                <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isPopular ? "text-indigo-200" : "text-slate-400"}`}
+                >
                   {p.name}
                 </p>
                 <p className="text-2xl font-bold leading-tight mb-1">{formatRupiah(p.price)}</p>
-                <p className={`text-[11px] leading-snug ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
+                <p className={`text-[11px] leading-snug ${isPopular ? "text-indigo-200" : "text-slate-400"}`}>
                   untuk {packageDays(p.time, p.bonus)} hari
                 </p>
-                <p className={`text-[11px] leading-snug ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
+                <p className={`text-[11px] leading-snug ${isPopular ? "text-indigo-200" : "text-slate-400"}`}>
                   {formatPerDayPrice(p.price, p.time, p.bonus)}
                 </p>
-                <p className={`text-xs flex-1 mt-3 ${isPopular ? 'text-indigo-100' : 'text-slate-600'}`}>
-                  {p.desc}
-                </p>
+                <p className={`text-xs flex-1 mt-3 ${isPopular ? "text-indigo-100" : "text-slate-600"}`}>{p.desc}</p>
                 <button
                   onClick={() => handlePilih(idx)}
                   disabled={loading !== null}
                   className={`mt-5 w-full py-2.5 rounded-2xl font-semibold text-sm transition-colors disabled:opacity-60 ${
                     isPopular
-                      ? 'bg-white text-indigo-600 hover:bg-indigo-50'
-                      : 'bg-slate-900 text-white hover:bg-slate-700'
+                      ? "bg-white text-indigo-600 hover:bg-indigo-50"
+                      : "bg-slate-900 text-white hover:bg-slate-700"
                   }`}
                 >
-                  {loading === idx ? 'Memproses...' : `Pilih ${p.name}`}
+                  {loading === idx ? "Memproses..." : `Pilih ${p.name}`}
                 </button>
               </div>
             );
@@ -651,9 +673,7 @@ export default function MembershipPage() {
         >
           <QrCode className="w-5 h-5" />
           <span>
-            {loading !== null
-              ? 'Memproses...'
-              : `Lanjut bayar — ${formatRupiah(dataPrice[selectedPkg]?.price ?? 0)}`}
+            {loading !== null ? "Memproses..." : `Lanjut bayar — ${formatRupiah(dataPrice[selectedPkg]?.price ?? 0)}`}
           </span>
         </button>
       </div>

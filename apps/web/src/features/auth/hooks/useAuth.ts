@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { setAccessToken } from "@/lib/session";
-import type { LoginAuthInput } from "../types";
 import {
   loginWithGoogleApi,
   loginWithPasswordApi,
@@ -34,7 +33,7 @@ export function usePasswordLoginMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: LoginAuthInput) => loginWithPasswordApi(payload),
+    mutationFn: (payload: { username: string; password: string; }) => loginWithPasswordApi(payload),
     onSuccess: (data) => {
       setAccessToken(data.token);
       queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });

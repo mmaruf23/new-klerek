@@ -13,6 +13,7 @@ export function useStoresQuery(query: StoreQuery) {
   return useQuery({
     queryKey: [...STORE_QUERY_KEY, query],
     queryFn: () => fetchStorePageApi(query),
+    initialData: () => ({data: [], page: undefined})
   });
 }
 

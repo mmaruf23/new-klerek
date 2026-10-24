@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAppSearchParams } from "@/hooks/useAppSearchParams";
 import {
@@ -14,14 +14,11 @@ import {
 } from "lucide-react";
 import {
   STORE_PAGE_LIMIT,
-  fetchStorePageApi,
   subscribeStoreApi,
 } from "@/features/dashboard/services/storeService";
 import type {
-  StoreListData,
   StoreStatusFilter,
 } from "@/features/dashboard/types";
-import { dataPrice, type StoreResponse } from "@packages/contract";
 import { getCurrentUser } from "@/lib/session";
 import { logoutApi } from "@/features/auth/services/authService";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
@@ -33,9 +30,10 @@ import {
   getActiveSub,
   getSubLabel,
   getSubStatus,
-} from "@/utils/subscription";
-import { config } from "@/config";
+} from "@/features/payment/utils/subscription";
 import { cn } from "@/lib/utils";
+import { useStoresQuery } from "../hooks/useStores";
+import { dataPrice } from "../../../constant";
 
 const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
   { label: "Semua", value: undefined },
@@ -74,45 +72,47 @@ export default function DashboardPage() {
   const offset = Number(searchParams.get("offset") ?? "0");
   const [search, setSearch] = useState(q);
 
-  const [stores, setStores] = useState<StoreListData>({ data: [], page: undefined });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {data: stores, error, isLoading } = useStoresQuery({q, offset, status})
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchStorePageApi({ q: q || undefined, status, offset });
-      setStores(res);
-    } catch (err) {
-      if (err instanceof Response && err.status >= 300 && err.status < 400) {
-        if (config.ENV == "production") navigate({ to: "/auth/login" });
-        return;
-      }
-      setError("Gagal memuat data toko.");
-    } finally {
-      setLoading(false);
-    }
-  }, [q, status, offset, navigate]);
+  // const [stores, setStores] = useState<StoreListData>({ data: [], page: undefined });
+  // const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setSearch(q);
-    loadData();
-  }, [q, status, offset, loadData]);
+  // const loadData = useCallback(async () => {
+  //   setLoading(true);
+  //   setError(null);
+  //   try {
+  //     const res = await fetchStorePageApi({ q: q || undefined, status, offset });
+  //     setStores(res);
+  //   } catch (err) {
+  //     if (err instanceof Response && err.status >= 300 && err.status < 400) {
+  //       if (config.ENV == "production") navigate({ to: "/auth/login" });
+  //       return;
+  //     }
+  //     setError("Gagal memuat data toko.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [q, status, offset, navigate]);
+
+  // useEffect(() => {
+  //   setSearch(q);
+  //   loadData();
+  // }, [q, status, offset, loadData]);
 
   const user = getCurrentUser();
   const displayName = user?.name || "Admin";
   const avatarInitials = getInitials(displayName);
 
-  const activeCount = stores.data.filter((s) => getActiveSub(s.subs)).length;
-  const trialCount = stores.data.filter((s) => getSubStatus(s.subs) === "trial").length;
+  const activeCount = stores ? stores.data.filter((s) => getActiveSub(s.subs)).length : 0;
+  const trialCount = stores ? stores.data.filter((s) => getSubStatus(s.subs) === "trial").length : 0;
 
-  const [modalStore, setModalStore] = useState<StoreResponse | null>(null);
+  const [modalStore, setModalStore] = useState<typeof stores['data'][number] | null>(null);
   const [selectedPkg, setSelectedPkg] = useState(3);
   const [submitting, setSubmitting] = useState(false);
   const [subResult, setSubResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const handleOpenModal = (store: StoreResponse) => {
+  const handleOpenModal = (store: typeof stores['data'][number]) => {
     setModalStore(store);
     setSelectedPkg(3);
     setSubResult(null);
@@ -232,7 +232,7 @@ export default function DashboardPage() {
           <div className="flex gap-2 order-2 md:order-1 flex-wrap">
             {STATUS_FILTERS.map((f) => {
               const selected = status === f.value;
-              const disabled = loading && !selected;
+              const disabled = isLoading && !selected;
               return (
                 <button
                   key={f.label}
@@ -293,9 +293,9 @@ export default function DashboardPage() {
       <div className="px-5 md:px-8 flex-1 min-h-0 overflow-y-auto">
         {error ? (
           <div className="bg-white rounded-2xl py-8 text-center text-sm text-red-500 border border-slate-100 shadow-sm px-4">
-            {error}
+            {error.message}
           </div>
-        ) : loading && stores.data.length === 0 ? (
+        ) : isLoading && stores.data.length === 0 ? (
           <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm divide-y divide-slate-100">
             {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonStoreItem key={i} />
@@ -396,7 +396,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Fixed Bottom Pagination Bar */}
-      {!loading && totalItems > 0 && (
+      {!isLoading && totalItems > 0 && (
         <div className="shrink-0 px-5 md:px-8 py-3 bg-[#EDF0F8] border-t border-slate-200/60 flex items-center justify-between pb-20 md:pb-16">
           <span className="text-xs text-slate-400">
             Menampilkan {startItem}–{endItem} dari {totalItems} toko
@@ -404,7 +404,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handlePageChange(Math.max(0, offset - limit))}
-              disabled={offset === 0 || loading}
+              disabled={offset === 0 || isLoading}
               className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -414,7 +414,7 @@ export default function DashboardPage() {
             </span>
             <button
               onClick={() => handlePageChange(offset + limit)}
-              disabled={!stores.page?.hasNext || loading}
+              disabled={!stores.page?.hasNext || isLoading}
               className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               <ChevronRight className="w-4 h-4" />

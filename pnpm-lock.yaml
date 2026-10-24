@@ -6,14 +6,7 @@ settings:
 
 importers:
 
-  .:
-    dependencies:
-      '@tanstack/react-query':
-        specifier: ''
-        version: 5.104.5(@types/react@19.2.14)(react@19.2.4)
-      '@tanstack/react-router':
-        specifier: ''
-        version: 1.170.45(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+  .: {}
 
   apps/api:
     dependencies:
@@ -78,9 +71,6 @@ importers:
       '@apps/api':
         specifier: workspace:*
         version: link:../api
-      '@packages/contract':
-        specifier: workspace:*
-        version: link:../../packages/contract
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.2.14)(react@19.2.4)

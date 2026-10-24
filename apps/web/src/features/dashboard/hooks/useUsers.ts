@@ -1,11 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UserQuery } from "../types";
-import {
-  fetchUsersApi,
-  fetchUserDetailApi,
-  updateUserRoleApi,
-  adjustBalanceApi,
-} from "../services/userService";
+import { fetchUsersApi, fetchUserDetailApi, updateUserRoleApi, adjustBalanceApi } from "../services/userService";
 
 export const USERS_QUERY_KEY = ["admin", "users"] as const;
 
@@ -13,6 +8,7 @@ export function useUsersQuery(query: UserQuery) {
   return useQuery({
     queryKey: [...USERS_QUERY_KEY, query],
     queryFn: () => fetchUsersApi(query),
+    initialData: () => ({ data: [], page: undefined }),
   });
 }
 
@@ -28,8 +24,7 @@ export function useUpdateUserRoleMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: "admin" | "user" }) =>
-      updateUserRoleApi(userId, role),
+    mutationFn: ({ userId, role }: { userId: string; role: "admin" | "user" }) => updateUserRoleApi(userId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
@@ -56,4 +51,3 @@ export function useAdjustBalanceMutation() {
     },
   });
 }
-

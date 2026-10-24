@@ -27,8 +27,8 @@ here it is :
   ```
 
 next : 
-- [ ] putuskan apakah tetap gunakan packages/contract atau sudah tidak perlu. 
-- [ ] hapus constant routes karena sudah safetype by tanstack-router
-- [ ] hapus directory pages, gunakan/pindahkan file pages ke directory features (components) sebagaimana tersedia.
-- [ ] hapus directory libs. pindahkan isinya ke directory lib (plural).
-- [ ] hapus file http.ts dan pindahkan isinya (flow refresh token ke auth feature dengan menggunakan tRPC hono seperti request lain).
+- [ ] putuskan apakah tetap gunakan packages/contract atau sudah tidak perlu. => nanti hapus aja pindahkan be sebagai source of truth.
+- [x] hapus constant routes karena sudah safetype by tanstack-router
+- [x] hapus directory pages, gunakan/pindahkan file-file pages ke directory features (components) sebagaimana tersedia.
+- [x] hapus directory libs. pindahkan isinya ke directory lib (plural).
+- [x] hapus file http.ts dan pindahkan isinya (flow refresh token ke auth feature dengan menggunakan tRPC hono seperti request lain).

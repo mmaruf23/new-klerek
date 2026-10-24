@@ -1,4 +1,4 @@
-import type { StoreResponse } from "@packages/contract";
+import type { StoreResponse } from "@/features/dashboard/types";
 import { formatDate, formatRupiah, timeAgo } from "@/utils/format";
 
 type Subs = StoreResponse["subs"];

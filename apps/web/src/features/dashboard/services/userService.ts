@@ -1,11 +1,11 @@
 import { apiClient } from "@/lib/apiClient";
 import { getAccessToken } from "@/lib/session";
-import type { AdminUserDetail, UserQuery, UsersListData } from "../types";
+import type { UserQuery } from "../types";
 
 export async function fetchUsersApi({
   offset = 0,
   q = "",
-}: UserQuery): Promise<UsersListData> {
+}: UserQuery) {
   const token = getAccessToken();
   const res = await apiClient.admin.users.$get(
     {
@@ -26,14 +26,14 @@ export async function fetchUsersApi({
   }
 
   return {
-    data: json.data as unknown as UsersListData["data"],
+    data: json.data,
     page: json.page,
   };
 }
 
 export async function fetchUserDetailApi(
   userId: string,
-): Promise<AdminUserDetail> {
+) {
   const token = getAccessToken();
   const res = await apiClient.admin.users[":id"].$get(
     {
@@ -48,7 +48,7 @@ export async function fetchUserDetailApi(
   if (!json.success || !json.data) {
     throw new Error(json.message ?? "User tidak ditemukan");
   }
-  return json.data as unknown as AdminUserDetail;
+  return json.data
 }
 
 export async function updateUserRoleApi(

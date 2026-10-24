@@ -1,8 +1,7 @@
 import { apiClient } from "@/lib/apiClient";
 import { clearSession, getAccessToken, setAccessToken } from "@/lib/session";
-import type { LoginAuthInput, LoginResponse, ProfileResponse } from "../types";
 
-export async function loginWithGoogleApi(credential: string): Promise<LoginResponse> {
+export async function loginWithGoogleApi(credential: string) {
   const res = await apiClient.auth.google.$post({
     json: { credential },
   });
@@ -14,7 +13,7 @@ export async function loginWithGoogleApi(credential: string): Promise<LoginRespo
   return json.data;
 }
 
-export async function loginWithPasswordApi(payload: LoginAuthInput): Promise<LoginResponse> {
+export async function loginWithPasswordApi(payload: { username: string; password: string }) {
   const res = await apiClient.auth.login.$post({
     json: payload,
   });
@@ -57,7 +56,7 @@ export function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-export async function getProfileApi(): Promise<ProfileResponse> {
+export async function getProfileApi() {
   const token = getAccessToken();
   const res = await apiClient.auth.me.$get(
     {},
@@ -74,5 +73,5 @@ export async function getProfileApi(): Promise<ProfileResponse> {
   if (!json.success || !json.data) {
     throw new Error(json.message ?? "Gagal memuat profil.");
   }
-  return json.data as unknown as ProfileResponse;
+  return json.data
 }

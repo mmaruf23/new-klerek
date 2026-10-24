@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { generatePaymentSchema, dataPrice } from "@packages/contract";
+import { dataPrice } from "@packages/contract";
 import type { ApiResponse, JwtClaims } from "@packages/contract";
 import { cookieMiddleware } from "../auth/middleware.js";
 import { createDonation, verifyWebhookToken, type SaweriaWebhookPayload } from "../../utils/saweria.js";
@@ -15,6 +15,7 @@ import {
 } from "./service.js";
 import { Exception } from "../../error.js";
 import { sendLog } from "../../utils/telegram.js";
+import { createPaymenValidator } from "./validator.js";
 
 export const paymentHandler = new Hono()
 
@@ -32,12 +33,9 @@ export const paymentHandler = new Hono()
 
   // POST /payment/generate — buat donasi QRIS di Saweria. Public: siapa pun boleh membayar untuk toko mana pun.
   // Body: { storeId, packageIndex, email }
-  .post("/generate", async (c) => {
-    const result = generatePaymentSchema.safeParse(await c.req.json().catch(() => ({})));
-    if (!result.success) {
-      return c.json({ success: false, message: result.error.issues[0].message }, 400);
-    }
-    const { storeId, packageIndex, email } = result.data;
+  .post("/generate", createPaymenValidator,async (c) => {
+    
+    const { storeId, packageIndex, email } = c.req.valid('json')
     const pkg = dataPrice[packageIndex];
 
     const store = await getStorePublicInfo(storeId);

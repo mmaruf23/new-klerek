@@ -1,9 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
-import type { Summary } from "@packages/contract";
-import { uploadPosFileApi } from "../components/services/uploadService";
+import { uploadPosFileApi } from "../services/uploadService";
 
 export function useUploadMutation() {
-  return useMutation<Summary, Error, File>({
+  return useMutation({
     mutationFn: (file: File) => uploadPosFileApi(file),
   });
 }

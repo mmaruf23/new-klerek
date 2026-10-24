@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import type { Summary, Data } from "@packages/contract";
 import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, X, Search } from "lucide-react";
 import { formatRupiah } from "@/utils/format";
+import type { Summary } from "../types/response";
 
 function extractKasir(header: string | null): string {
   const match = header?.match(/[Kk]asir[:\s]+([A-Za-z]+)/);
@@ -35,7 +35,7 @@ export default function DetailPage() {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("semua");
-  const [selected, setSelected] = useState<Data | null>(null);
+  const [selected, setSelected] = useState<Summary['data'][number] | null>(null);
   const [desktopPage, setDesktopPage] = useState(1);
   const [expandedBill, setExpandedBill] = useState<string | null>(null);
   const [mobileLimit, setMobileLimit] = useState(MOBILE_PAGE_SIZE);
