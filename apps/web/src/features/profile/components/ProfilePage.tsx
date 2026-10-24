@@ -1,6 +1,5 @@
 import { useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { routes } from "@/routes";
 import { useProfileQuery, useLogoutMutation } from "@/features/auth/hooks/useAuth";
 import { formatDate, formatRupiah } from "@/utils/format";
 import {
@@ -95,7 +94,7 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
-        navigate({ to: routes.authLogin });
+        navigate({ to: "/auth/login" });
       },
     });
   };
@@ -115,7 +114,7 @@ export default function ProfilePage() {
             {error instanceof Error ? error.message : "Gagal memuat profil"}
           </p>
           <button
-            onClick={() => navigate({ to: routes.authLogin })}
+            onClick={() => navigate({ to: "/auth/login" })}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition-colors"
           >
             Kembali ke Login
@@ -128,7 +127,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-[#EDF0F8]">
       <header className="bg-white shadow-sm h-14 flex items-center justify-between px-6">
-        <Link to={routes.home} className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
               <path d="M8 1L15 8L8 15L1 8L8 1Z" fill="white" />

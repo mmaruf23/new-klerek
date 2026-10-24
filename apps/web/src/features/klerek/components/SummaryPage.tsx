@@ -1,5 +1,4 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { routes } from "@/routes";
 import type { Summary } from "@packages/contract";
 import { ChevronRight, Download, CalendarDays, Users, Receipt, Package, Gift } from "lucide-react";
 import { formatDateWithDay, formatRupiah } from "@/utils/format";
@@ -13,13 +12,13 @@ export default function SummaryPage() {
   useEffect(() => {
     const raw = sessionStorage.getItem("klerek_summary");
     if (!raw) {
-      navigate({ to: routes.home });
+      navigate({ to: "/" });
       return;
     }
     try {
       setSummary(JSON.parse(raw) as Summary);
     } catch {
-      navigate({ to: routes.home });
+      navigate({ to: "/" });
     } finally {
       setLoading(false);
     }
@@ -70,7 +69,7 @@ export default function SummaryPage() {
         </div>
 
         <Link
-          to={routes.refer}
+          to="/refer"
           className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm"
         >
           <Gift className="w-4 h-4 text-amber-500 shrink-0" />
@@ -120,7 +119,7 @@ export default function SummaryPage() {
       {/* Desktop content */}
       <main className="hidden md:flex flex-col flex-1 max-w-5xl w-full mx-auto px-8 py-8 space-y-6">
         <div className="flex items-center gap-1.5 text-sm text-slate-400">
-          <Link to={routes.home} className="hover:text-slate-700 transition-colors">
+          <Link to={"/"} className="hover:text-slate-700 transition-colors">
             Upload
           </Link>
           {filename && (
@@ -153,7 +152,7 @@ export default function SummaryPage() {
               Ekspor PDF
             </button>
             <button
-              onClick={() => navigate({ to: routes.home })}
+              onClick={() => navigate({ to: "/" })}
               className="flex items-center gap-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-2 rounded-lg transition-colors"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -165,7 +164,7 @@ export default function SummaryPage() {
         </div>
 
         <Link
-          to={routes.refer}
+          to="/refer"
           className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm w-fit"
         >
           <Gift className="w-4 h-4 text-amber-500 shrink-0" />
@@ -211,7 +210,7 @@ export default function SummaryPage() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-sm font-semibold text-slate-800">Top item</h2>
               <Link
-                to={routes.detail}
+                to="/detail"
                 className="text-xs text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-0.5"
               >
                 Semua <ChevronRight className="w-3 h-3" />

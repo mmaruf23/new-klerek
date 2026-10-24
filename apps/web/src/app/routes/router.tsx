@@ -4,16 +4,16 @@ import {
   createRoute,
   Outlet,
 } from "@tanstack/react-router";
-import HomePage from "@/pages/HomePage";
-import SummaryPage from "@/pages/SummaryPage";
-import DetailPage from "@/pages/DetailPage";
-import LoginPage from "@/pages/auth/LoginPage";
-import ProfilePage from "@/pages/admin/ProfilePage";
-import DashboardPage from "@/pages/admin/DashboardPage";
-import MembershipPage from "@/pages/MembershipPage";
-import ReferPage from "@/pages/ReferPage";
-import UsersPage from "@/pages/admin/UsersPage";
-import ContactPage from "@/pages/ContactPage";
+import HomePage from "@/features/home/components/HomePage";
+import SummaryPage from "@/features/klerek/components/SummaryPage";
+import DetailPage from "@/features/klerek/components/DetailPage";
+import LoginPage from "@/features/auth/components/LoginPage";
+import ProfilePage from "@/features/profile/components/ProfilePage";
+import DashboardPage from "@/features/dashboard/components/DashboardPage";
+import MembershipPage from "@/features/payment/components/MembershipPage";
+import ReferPage from "@/features/referral/components/ReferPage";
+import UsersPage from "@/features/dashboard/components/UsersPage";
+import ContactPage from "@/features/contact/components/ContactPage";
 import Layout from "@/components/layout/Layout";
 import AdminLayout from "@/components/layout/AdminLayout";
 import {

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Lock } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { routes } from "@/routes";
 import {
   useGoogleLoginMutation,
   usePasswordLoginMutation,
@@ -30,7 +29,7 @@ const LoginPage = () => {
       { username, password },
       {
         onSuccess: () => {
-          navigate({ to: routes.dashboard });
+          navigate({ to: '/dashboard' });
         },
       },
     );
@@ -41,7 +40,7 @@ const LoginPage = () => {
     setGoogleError(null);
     googleLoginMutation.mutate(credential, {
       onSuccess: () => {
-        navigate({ to: routes.dashboard });
+        navigate({ to: '/dashboard' });
       },
     });
   };
@@ -59,7 +58,7 @@ const LoginPage = () => {
       <div className="w-full max-w-sm flex flex-col min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-14 pb-2">
-          <Link to={routes.home}>
+          <Link to="/">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

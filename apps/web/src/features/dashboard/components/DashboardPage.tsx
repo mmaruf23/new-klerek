@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAppSearchParams } from "@/hooks/useAppSearchParams";
-import { routes } from "@/routes";
 import {
   Bell,
   Search,
@@ -87,7 +86,7 @@ export default function DashboardPage() {
       setStores(res);
     } catch (err) {
       if (err instanceof Response && err.status >= 300 && err.status < 400) {
-        if (config.ENV == "production") navigate({ to: routes.authLogin });
+        if (config.ENV == "production") navigate({ to: "/auth/login" });
         return;
       }
       setError("Gagal memuat data toko.");
@@ -191,7 +190,7 @@ export default function DashboardPage() {
             <button
               onClick={async () => {
                 await logoutApi();
-                navigate({ to: routes.authLogin });
+                navigate({ to: "/auth/login" });
               }}
               className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm hover:bg-indigo-600 transition-colors"
               title="Keluar"

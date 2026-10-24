@@ -1,6 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { routes } from "@/routes";
-import { useUploadMutation } from "@/features/upload/hooks/useUploadPos";
+import { useUploadMutation } from "@/features/klerek/hooks/useUploadPos";
 
 const RECENT_KEY = "klerek_recent_uploads";
 
@@ -45,7 +44,7 @@ export function useUpload() {
         sessionStorage.setItem("klerek_summary", JSON.stringify(summary));
         sessionStorage.setItem("klerek_upload_filename", file.name);
         saveRecent(file, summary.store_name, summary.branch_id);
-        navigate({ to: routes.summary });
+        navigate({ to: "/summary" });
       },
     });
   };

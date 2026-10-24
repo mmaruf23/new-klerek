@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Gift, Check, ArrowLeft, Store } from "lucide-react";
-import { routes } from "@/routes";
 import { useSubmitReferralMutation } from "@/features/dashboard/hooks/useStores";
 
 interface SuccessState {
@@ -72,7 +71,7 @@ export default function ReferPage() {
             </div>
 
             <Link
-              to={routes.summary}
+              to="/summary"
               className="flex items-center justify-center gap-2 w-full bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white font-semibold py-4 rounded-2xl text-base transition-colors shadow-lg shadow-indigo-200"
             >
               Kembali ke rekap
@@ -99,7 +98,7 @@ export default function ReferPage() {
             <span className="text-base font-semibold text-slate-800 tracking-tight">klerek</span>
           </div>
           <Link
-            to={routes.summary}
+            to="/summary"
             className="flex items-center gap-1.5 text-slate-500 text-sm font-medium hover:text-slate-700 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

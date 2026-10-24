@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { routes } from "@/routes";
 import type { Summary, Data } from "@packages/contract";
 import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, X, Search } from "lucide-react";
 import { formatRupiah } from "@/utils/format";
@@ -22,13 +21,13 @@ export default function DetailPage() {
   useEffect(() => {
     const raw = sessionStorage.getItem("klerek_summary");
     if (!raw) {
-      navigate({ to: routes.home });
+      navigate({ to: "/" });
       return;
     }
     try {
       setSummary(JSON.parse(raw) as Summary);
     } catch {
-      navigate({ to: routes.home });
+      navigate({ to: "/" });
     } finally {
       setLoading(false);
     }

@@ -1,10 +1,11 @@
-import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { Link, Outlet } from "@tanstack/react-router";
 import Navbar from "../Navbar";
 import { AlignJustify, BarChart2, Info } from "lucide-react";
-import { routes } from "@/routes";
+import { useIsActivePath } from "@/hooks/useIsActivePath";
 
 const Layout = () => {
-  const location = useLocation();
+  const activePathSummary = useIsActivePath('/summary');
+  const activePathDetail = useIsActivePath('/detail');
   return (
     <>
       <div className="min-h-svh bg-white md:bg-[#EDF0F8] flex flex-col">
@@ -28,21 +29,21 @@ const Layout = () => {
         </header>
         <Outlet />
 
-        {(location.pathname === routes.summary || location.pathname === routes.detail) && (
+        {activePathSummary || activePathDetail && (
           <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex gap-2 z-10">
             <Link
-              to={routes.summary}
+              to="/summary"
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                location.pathname === routes.summary ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+                activePathSummary ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
               }`}
             >
               <BarChart2 className="w-4 h-4" />
               Rekap
             </Link>
             <Link
-              to={routes.detail}
+              to="/detail"
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                location.pathname === routes.detail ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+                activePathDetail ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
               }`}
             >
               <AlignJustify className="w-4 h-4" />

@@ -8,7 +8,7 @@ import {
   fetchUserDetailApi,
   adjustBalanceApi,
   updateUserRoleApi,
-} from "@/features/users/services/userService";
+} from "@/features/dashboard/services/userService";
 import { getCurrentUser } from "@/lib/session";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
 import { formatDate, formatRupiah } from "@/utils/format";
