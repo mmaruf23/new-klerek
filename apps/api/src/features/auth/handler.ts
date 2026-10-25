@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { loginWithGoogle, refreshUserToken, issueToken, loginWithPassword } from "./service.js";
 import { authMiddleware } from "./middleware.js";
-import { JwtClaims } from "../../types/jwt.js";
+import type { JwtClaims } from "../../types/jwt.js";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
 import type { CookieOptions } from "hono/utils/cookie";
 import { config } from "../../config.js";
 import type { Balance } from "../../db/schema.js";
 import { googleLoginValidator, loginValidator } from "./validator.js";
 import { getBalanceHistory, getProfile } from "../user/service.js";
-import { ApiResponse } from "../../types/response.js";
+import type { ApiResponse } from "../../types/response.js";
 
 const REFRESH_COOKIE_KEY = "refresh_token";
 

@@ -2,15 +2,10 @@ import { count, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { users, store, balance } from "../../db/schema.js";
 import { Exception } from "../../error.js";
-import type {
-  AdminUserItem,
-  AdminUserDetail,
-  BalanceAdjustInput,
-  RoleUpdateInput,
-  CreateUserInput,
-} from "@packages/contract";
+
 import { hashPassword } from "../auth/utils.js";
 import { generateReferralCode } from "./util.js";
+import type { BalanceAdjustInput, CreateUserInput, RoleUpdateInput } from "./validator.js";
 
 export const generateUniqueReferralCode = async () => {
   let referralCode: string;
@@ -71,7 +66,7 @@ export const listUsers = async ({ limit, offset, q }: ListUsersQuery) => {
   const balanceMap = new Map(balances.map((b) => [b.userId, Number(b.total ?? 0)]));
   const storeCountMap = new Map(storeCounts.map((s) => [s.referrerId, Number(s.count)]));
 
-  const data: AdminUserItem[] = rows.map((u) => ({
+  const data = rows.map((u) => ({
     id: u.id,
     name: u.name,
     email: u.email,
@@ -86,7 +81,7 @@ export const listUsers = async ({ limit, offset, q }: ListUsersQuery) => {
   return { data, total, limit, offset, hasNext: offset + limit < total };
 };
 
-export const getUserDetail = async (userId: string): Promise<AdminUserDetail> => {
+export const getUserDetail = async (userId: string) => {
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!user) throw Exception.NotFound("User tidak ditemukan");
 

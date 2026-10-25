@@ -14,8 +14,8 @@ import {
 import { Exception } from "../../error.js";
 import { sendLog } from "../../utils/telegram.js";
 import { generatePaymentValidator } from "./validator.js";
-import { JwtClaims } from "../../types/jwt.js";
-import { ApiResponse } from "../../types/response.js";
+import type { JwtClaims } from "../../types/jwt.js";
+import type { ApiResponse } from "../../types/response.js";
 import { dataPrice } from "../../constant/price.js";
 
 export const paymentHandler = new Hono()

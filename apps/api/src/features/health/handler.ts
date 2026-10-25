@@ -4,7 +4,7 @@ import { pingTelegram } from "../../utils/telegram.js";
 import { type Config, config } from "../../config.js";
 import { authMiddleware, superAdminMiddleware } from "../auth/middleware.js";
 import { checkSaweria } from "../../utils/saweria.js";
-import { ApiResponse } from "../../types/response.js";
+import type { ApiResponse } from "../../types/response.js";
 
 export const healthHandler = new Hono()
   .get("/", (c) => {

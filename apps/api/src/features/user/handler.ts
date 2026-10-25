@@ -1,12 +1,11 @@
 import { Hono } from "hono";
-import { balanceAdjustSchema, roleUpdateSchema } from "@packages/contract";
 import { adminMiddleware, superAdminMiddleware } from "../auth/middleware.js";
 import { listUsers, getUserDetail, adjustUserBalance, updateUserRole, createUser } from "./service.js";
 import { Exception } from "../../error.js";
 import { balanceAdjustValidator, createUserValidator, roleUpdateValidator } from "./validator.js";
 import type { User } from "../../db/schema.js";
-import { ApiResponse } from "../../types/response.js";
-import { JwtClaims } from "../../types/jwt.js";
+import type { ApiResponse } from "../../types/response.js";
+import type { JwtClaims } from "../../types/jwt.js";
 
 export const userHandler = new Hono()
 

@@ -28,5 +28,5 @@ const app = new Hono()
   .notFound(notFoundHandler);
 export default app;
 
-export type { JwtClaims } from "@packages/contract";
+export type { JwtClaims } from "./types/jwt.js";
 export type AppType = typeof app;

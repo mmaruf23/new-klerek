@@ -1,6 +1,6 @@
 import { validator } from "hono/validator";
 import z from "zod";
-import { ApiResponse } from "../../types/response.js";
+import type { ApiResponse } from "../../types/response.js";
 
 const createUserSchema = z.object({
   name: z.string().min(3),
@@ -40,3 +40,7 @@ export const roleUpdateValidator = validator("json", (value, c) => {
 
   return result.data;
 });
+
+export type BalanceAdjustInput = z.infer<typeof balanceAdjustSchema>
+export type RoleUpdateInput = z.infer<typeof roleUpdateSchema>
+export type CreateUserInput = z.infer<typeof createUserSchema>

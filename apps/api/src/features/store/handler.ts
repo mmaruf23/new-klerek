@@ -11,8 +11,8 @@ import { isValidStoreID } from "./helper.js";
 import { Exception } from "../../error.js";
 import { authMiddleware, cookieMiddleware } from "../auth/middleware.js";
 import { referStoreValidator } from "./validator.js";
-import { JwtClaims } from "../../types/jwt.js";
-import { ApiResponse } from "@packages/contract";
+import type { JwtClaims } from "../../types/jwt.js";
+import type { ApiResponse } from "../../types/response.js";
 
 export const storeHandler = new Hono()
   .post("/refer", cookieMiddleware, referStoreValidator, async (c) => {

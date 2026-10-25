@@ -1,7 +1,7 @@
-import type { ApiResponse } from "@packages/contract";
 import type { ErrorHandler, NotFoundHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { sendLog } from "./utils/telegram.js";
+import type { ApiResponse } from "./types/response.js";
 
 export class Exception {
   public static NotFound(m?: string) {

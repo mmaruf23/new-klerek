@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { validator } from "hono/validator";
-import { ApiResponse } from "../../types/response.js";
+import type { ApiResponse } from "../../types/response.js";
 
 const loginAuthSchema = z.object({
   username: z.string().min(3, "Username minimal 3 karakter"),

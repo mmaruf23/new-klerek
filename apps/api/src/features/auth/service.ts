@@ -7,7 +7,7 @@ import { setClaims, getClaims } from "../../utils/jwt.js";
 import { sendLog } from "../../utils/telegram.js";
 import { comparePassword, getUsernameFromEmail } from "./utils.js";
 import { generateUniqueReferralCode } from "../user/service.js";
-import { GoogleAuthInput, LoginAuthInput } from "./validator.js";
+import type { GoogleAuthInput, LoginAuthInput } from "./validator.js";
 
 export const loginWithPassword = async (paylaod: LoginAuthInput) => {
   const user = await db.query.users.findFirst({

@@ -1,7 +1,7 @@
 import { validator } from "hono/validator";
 import z from "zod";
 import { dataPrice } from "../../constant/price.js";
-import { ApiResponse } from "../../types/response.js";
+import type { ApiResponse } from "../../types/response.js";
 
 const generatePaymentSchema = z.object({
   storeId: z

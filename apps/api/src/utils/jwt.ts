@@ -1,6 +1,6 @@
 import { sign, verify } from "hono/jwt";
 import { config } from "../config.js";
-import type { JwtClaims } from "@packages/contract";
+import type { JwtClaims } from "../types/jwt.js";
 
 export const setClaims = async (payload: JwtClaims) => {
   const token = await sign(payload, config.JWT_SECRET, "HS256");

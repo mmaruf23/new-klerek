@@ -4,7 +4,7 @@ import type { MiddlewareHandler } from "hono";
 import { getClaims } from "../../utils/jwt.js";
 import { getCookie } from "hono/cookie";
 import { Exception } from "../../error.js";
-import { JwtClaims } from "../../types/jwt.js";
+import type { JwtClaims } from "../../types/jwt.js";
 
 const jwtMiddleware = jwt({
   secret: config.JWT_SECRET,
