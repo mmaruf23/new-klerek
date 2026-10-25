@@ -16,7 +16,6 @@
   "dependencies": {
     "@hono/node-server": "^2.0.1",
     "@neondatabase/serverless": "^1.0.2",
-    "@packages/contract": "workspace:*",
     "@types/adm-zip": "^0.5.7",
     "@types/jsonwebtoken": "9.0.10",
     "adm-zip": "^0.5.16",
