@@ -1,15 +1,12 @@
-import AdmZip from 'adm-zip';
-import BetterSqlite3 from 'better-sqlite3';
-import {
-  isValidDateTX,
-  isValidUserID,
-  mapToResponseObject,
-  parseFakturPrefix,
-  query,
-} from './helper.js';
-import type { Row } from './type.js';
-import { Exception } from '../../error.js';
-import { isValidStoreID } from '../store/helper.js';
+import AdmZip from "adm-zip";
+import BetterSqlite3 from "better-sqlite3";
+import { isValidDateTX, isValidUserID, mapToResponseObject, parseFakturPrefix, query } from "./helper.js";
+import type { Row, Summary } from "./type.js";
+import { Exception } from "../../error.js";
+import { isValidStoreID } from "../store/helper.js";
+import { db } from "../../db/client.js";
+import { dailySummary } from "../../db/schema.js";
+import { sql } from "drizzle-orm";
 
 interface DBParams {
   buffer: Buffer;
@@ -21,26 +18,21 @@ interface DBParams {
   dateTX: string;
 }
 
-export const prepareDbBuffer = async (
-  file: File | string,
-): Promise<DBParams> => {
-  if (typeof file == 'string')
-    throw Exception.Validation('invalid request format');
+export const prepareDbBuffer = async (file: File | string): Promise<DBParams> => {
+  if (typeof file == "string") throw Exception.Validation("invalid request format");
 
-  if (!file.name.endsWith('.zip'))
-    throw Exception.Validation('invalid request content');
+  if (!file.name.endsWith(".zip")) throw Exception.Validation("invalid request content");
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const zip = new AdmZip(buffer);
 
   const [dbFile] = zip.getEntries();
-  if (!dbFile.entryName.endsWith('.db'))
-    throw Exception.BadRequest('invalid file content');
+  if (!dbFile.entryName.endsWith(".db")) throw Exception.BadRequest("invalid file content");
 
-  const [storeID, dateTX, userID] = dbFile.name.split('_');
+  const [storeID, dateTX, userID] = dbFile.name.split("_");
 
   if (!isValidStoreID(storeID) || !isValidUserID(userID) || !isValidDateTX(dateTX))
-    throw Exception.BadRequest('invalid file content format');
+    throw Exception.BadRequest("invalid file content format");
 
   return {
     storeID,
@@ -64,27 +56,59 @@ export const initAndValidateDB = (buffer: Buffer): BetterSqlite3.Database => {
 
     if (!table_exists) {
       db.close();
-      throw Exception.BadRequest('invalid file content format');
+      throw Exception.BadRequest("invalid file content format");
     }
   } catch (error) {
     console.error(error);
-    throw Exception.ServerError('error while reading file content');
+    throw Exception.ServerError("error while reading file content");
   }
 
   return db;
 };
 
-export const processDB = (
-  db: BetterSqlite3.Database,
-  userID: string,
-  fakturPrefix: string,
-) => {
+export const processDB = (db: BetterSqlite3.Database, userID: string, fakturPrefix: string) => {
   let rows: Row[];
   try {
     rows = db.prepare(query).all(userID, fakturPrefix) as Row[];
   } catch (error) {
-    throw Exception.ServerError('failed get transaction data');
+    throw Exception.ServerError("failed get transaction data");
   }
 
   return mapToResponseObject(rows);
+};
+
+interface SaveDailySummaryParams {
+  storeId: string;
+  userId: string;
+  /** tanggal transaksi dari nama file, format YYYY-MM-DD */
+  dateTx: string;
+  summary: Summary;
+}
+
+// Upsert rekap harian per (toko, kasir, tanggal). Upload ulang hari yang sama menimpa angka lama.
+export const saveDailySummary = async ({ storeId, userId, dateTx, summary }: SaveDailySummaryParams) => {
+  // NB: `summary.total_faktur` di helper sebenarnya akumulasi cash, bukan jumlah faktur
+  const totalFaktur = summary.data.length;
+  const memberFaktur = summary.data.filter((d) => d.member.no_member?.trim()).length;
+  const totalCash = summary.data.reduce((acc, d) => acc + d.cash, 0);
+
+  await db
+    .insert(dailySummary)
+    .values({
+      storeId,
+      userId,
+      dateTx,
+      totalFaktur,
+      memberFaktur,
+      totalCash,
+    })
+    .onConflictDoUpdate({
+      target: [dailySummary.storeId, dailySummary.dateTx, dailySummary.userId],
+      set: {
+        totalFaktur,
+        memberFaktur,
+        totalCash,
+        updatedAt: sql`now()`,
+      },
+    });
 };

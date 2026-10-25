@@ -1,4 +1,4 @@
-import { time } from "@packages/contract";
+import { time } from "../../constant/time.js";
 import { db } from "../../db/client.js";
 import { subscription, type SubscriptionInsert } from "../../db/schema.js";
 import { sendLog } from "../../utils/telegram.js";

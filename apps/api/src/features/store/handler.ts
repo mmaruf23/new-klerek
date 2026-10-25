@@ -1,24 +1,28 @@
-import type { ApiResponse, JwtClaims, StoreResponse, ReferStoreResponse } from "@packages/contract";
-import { referStoreSchema } from "@packages/contract";
 import { Hono } from "hono";
-import { getAllStore, getStoreByIDWithLatestSubs, getStorePublicInfo, addSubscriptionByBalance, setStoreReferrer, countStore } from "./service.js";
+import {
+  getAllStore,
+  getStoreByIDWithLatestSubs,
+  getStorePublicInfo,
+  addSubscriptionByBalance,
+  setStoreReferrer,
+  countStore,
+} from "./service.js";
 import { isValidStoreID } from "./helper.js";
 import { Exception } from "../../error.js";
 import { authMiddleware, cookieMiddleware } from "../auth/middleware.js";
+import { referStoreValidator } from "./validator.js";
+import { JwtClaims } from "../../types/jwt.js";
+import { ApiResponse } from "@packages/contract";
 
 export const storeHandler = new Hono()
-  .post("/refer", cookieMiddleware, async (c) => {
+  .post("/refer", cookieMiddleware, referStoreValidator, async (c) => {
     const claims = c.get("jwtPayload") as JwtClaims | undefined;
     if (!claims?.store_id) throw Exception.Unauthorized();
 
-    const body = await c.req.json().catch(() => null);
-    const result = referStoreSchema.safeParse(body);
-    if (!result.success) {
-      return c.json<ApiResponse>({ success: false, message: result.error.issues[0].message }, 400);
-    }
+    const req = c.req.valid("json");
 
-    const data = await setStoreReferrer(claims.store_id, result.data.referralCode);
-    return c.json<ApiResponse<ReferStoreResponse>>({ success: true, data });
+    const data = await setStoreReferrer(claims.store_id, req.referralCode);
+    return c.json<ApiResponse<typeof data>>({ success: true, data });
   })
 
   .get("/lookup/:id", async (c) => {
@@ -32,8 +36,8 @@ export const storeHandler = new Hono()
   })
   .get("/count", authMiddleware, async (c) => {
     const { sub: userId, role } = c.get("jwtPayload") as JwtClaims;
-    if (!userId || !role) throw Exception.Unauthorized("Claims value tidak valid!")
-    const data = await countStore({userId, role})
+    if (!userId || !role) throw Exception.Unauthorized("Claims value tidak valid!");
+    const data = await countStore({ userId, role });
     return c.json<ApiResponse<typeof data>>({ success: true, data });
   })
 
@@ -46,7 +50,7 @@ export const storeHandler = new Hono()
     const { sub: userId } = c.get("jwtPayload") as JwtClaims;
     const { data, ...page } = await getAllStore({ limit, offset, search, status, userId });
 
-    return c.json<ApiResponse<StoreResponse[]>>({
+    return c.json<ApiResponse<typeof data>>({
       success: true,
       data: data,
       page,
@@ -59,7 +63,7 @@ export const storeHandler = new Hono()
     const data = await getStoreByIDWithLatestSubs(id);
     if (!data) throw Exception.NotFound("store not found");
 
-    return c.json<ApiResponse<StoreResponse>>({
+    return c.json<ApiResponse<typeof data>>({
       success: true,
       data,
     });

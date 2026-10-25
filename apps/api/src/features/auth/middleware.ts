@@ -2,9 +2,9 @@ import { jwt } from "hono/jwt";
 import { config } from "../../config.js";
 import type { MiddlewareHandler } from "hono";
 import { getClaims } from "../../utils/jwt.js";
-import type { JwtClaims } from "@packages/contract";
 import { getCookie } from "hono/cookie";
 import { Exception } from "../../error.js";
+import { JwtClaims } from "../../types/jwt.js";
 
 const jwtMiddleware = jwt({
   secret: config.JWT_SECRET,

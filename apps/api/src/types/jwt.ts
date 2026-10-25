@@ -1,0 +1,9 @@
+import type { JwtPayload } from "jsonwebtoken";
+
+export interface JwtClaims extends JwtPayload {
+  readonly store_id?: string;
+  readonly sub?: string;
+  readonly name?: string;
+  readonly role?: "superadmin" | "admin" | "user";
+  readonly type?: "access" | "refresh";
+}

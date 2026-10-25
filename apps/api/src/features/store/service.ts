@@ -2,7 +2,6 @@ import { and, count, desc, eq, exists, gt, ilike, max, not, or, sql } from "driz
 import { db } from "../../db/client.js";
 import { store, subscription, users, balance, type StoreInsert, type User } from "../../db/schema.js";
 import { Exception } from "../../error.js";
-import type { StoreResponse } from "@packages/contract";
 import { dataPrice } from "../subscription/data.js";
 
 export type StoreStatusFilter = "active" | "expired";
@@ -106,7 +105,7 @@ export const getStorePublicInfo = async (id: string): Promise<{ id: string; name
   });
 };
 
-export const getStoreByIDWithLatestSubs = async (id: string): Promise<StoreResponse | undefined> => {
+export const getStoreByIDWithLatestSubs = async (id: string) => {
   const storeResult = await db.query.store.findFirst({
     where: eq(store.id, id),
     with: {

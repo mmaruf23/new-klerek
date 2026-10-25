@@ -1,5 +1,4 @@
-import type { Summary, Data } from '@packages/contract';
-import type { Row } from './type.js';
+import type { Row, Data, Summary } from './type.js';
 import { Exception } from '../../error.js';
 
 export const query = `SELECT ts.user_id,

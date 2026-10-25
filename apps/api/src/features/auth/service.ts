@@ -5,9 +5,9 @@ import { users, type User } from "../../db/schema.js";
 import { verifyGoogleIdToken } from "../../utils/googleAuth.js";
 import { setClaims, getClaims } from "../../utils/jwt.js";
 import { sendLog } from "../../utils/telegram.js";
-import type { GoogleAuthInput, LoginAuthInput } from "@packages/contract";
 import { comparePassword, getUsernameFromEmail } from "./utils.js";
 import { generateUniqueReferralCode } from "../user/service.js";
+import { GoogleAuthInput, LoginAuthInput } from "./validator.js";
 
 export const loginWithPassword = async (paylaod: LoginAuthInput) => {
   const user = await db.query.users.findFirst({
