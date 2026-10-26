@@ -1,0 +1,18 @@
+# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+node_modules
+.vercel
+.env
+.env*.local
+.claude
+design
+drizzle
+docs
+dist
+env.sh
+deploy.sh
+apps/web/what-to-rewrite.md
+apps/api/src/db/migrate-from-supabase.ts
+apps/web/README.md
