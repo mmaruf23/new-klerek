@@ -5,11 +5,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./src/index.ts"
+      "types": "./dist/index.d.ts"
     }
   },
   "scripts": {
     "dev": "tsx ./server.ts",
+    "build": "tsc",
     "migration:run": "drizzle-kit migrate",
     "migration:generate": "drizzle-kit generate"
   },

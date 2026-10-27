@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-web deploy deploy-api deploy-web migrate-run migrate-gen env-list env-push env-pull
+.PHONY: dev dev-api dev-web build-api build-web deploy deploy-api deploy-web migrate-run migrate-gen env-list env-push env-pull
 
 dev:
 	pnpm --filter @apps/api dev & pnpm --filter @apps/web dev
@@ -8,6 +8,12 @@ dev-api:
 
 dev-web:
 	pnpm --filter @apps/web dev
+
+build-api:
+	pnpm --filter @apps/api build
+
+build-web:
+	pnpm --filter @apps/web build
 
 deploy:
 	./deploy.sh all
