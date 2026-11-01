@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { StoreQuery } from "../types";
 import {
+  fetchStoreCountApi,
   fetchStorePageApi,
   fetchStorePublicApi,
   submitReferralApi,
@@ -14,6 +15,14 @@ export function useStoresQuery(query: StoreQuery) {
     queryKey: [...STORE_QUERY_KEY, query],
     queryFn: () => fetchStorePageApi(query),
     initialData: () => ({data: [], page: undefined})
+  });
+}
+
+/** Rekap count toko global dari GET /store/count — dipakai kartu statistik dashboard. */
+export function useStoreCountQuery() {
+  return useQuery({
+    queryKey: [...STORE_QUERY_KEY, "count"],
+    queryFn: fetchStoreCountApi,
   });
 }
 

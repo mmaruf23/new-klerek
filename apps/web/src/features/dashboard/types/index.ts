@@ -3,6 +3,9 @@ import type { InferResponseType } from "hono";
 
 export type StoreResponse = NonNullable<InferResponseType<typeof apiClient.store.$get>['data']>[number]
 
+/** Rekap jumlah toko dari GET /store/count (selalu global, tidak terpengaruh filter list). */
+export type StoreCountResponse = NonNullable<InferResponseType<typeof apiClient.store.count.$get>['data']>
+
 export interface SubscribeResult {
   subscription: { id: number; storeId: string; createdAt: string; expiresAt: string };
   debitAmount: number;

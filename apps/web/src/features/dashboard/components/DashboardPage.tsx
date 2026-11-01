@@ -12,10 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import {
-  STORE_PAGE_LIMIT,
-  subscribeStoreApi,
-} from "@/features/dashboard/services/storeService";
+import { STORE_PAGE_LIMIT } from "@/features/dashboard/services/storeService";
 import type {
   StoreStatusFilter,
 } from "@/features/dashboard/types";
@@ -27,12 +24,11 @@ import {
   formatActiveUntil,
   formatExpiryRelative,
   formatPackageDuration,
-  getActiveSub,
   getSubLabel,
   getSubStatus,
 } from "@/features/payment/utils/subscription";
 import { cn } from "@/lib/utils";
-import { useStoresQuery } from "../hooks/useStores";
+import { useStoreCountQuery, useStoresQuery, useSubscribeStoreMutation } from "../hooks/useStores";
 import { dataPrice } from "../../../constant";
 
 const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
@@ -72,7 +68,16 @@ export default function DashboardPage() {
   const offset = Number(searchParams.get("offset") ?? "0");
   const [search, setSearch] = useState(q);
 
-  const {data: stores, error, isLoading } = useStoresQuery({q, offset, status})
+  const { data: stores, error, isLoading } = useStoresQuery({ q, offset, status });
+
+  // Rekap count toko diambil dari GET /store/count — angka global (bukan hasil hitung per halaman)
+  const { data: storeCount } = useStoreCountQuery();
+  const totalCount = storeCount?.total ?? 0;
+  const activeCount = storeCount?.active ?? 0;
+  const trialCount = storeCount?.trial ?? 0;
+  const expiredCount = storeCount?.expired ?? 0;
+
+  const subscribeMutation = useSubscribeStoreMutation();
 
   // const [stores, setStores] = useState<StoreListData>({ data: [], page: undefined });
   // const [loading, setLoading] = useState(true);
@@ -104,12 +109,8 @@ export default function DashboardPage() {
   const displayName = user?.name || "Admin";
   const avatarInitials = getInitials(displayName);
 
-  const activeCount = stores ? stores.data.filter((s) => getActiveSub(s.subs)).length : 0;
-  const trialCount = stores ? stores.data.filter((s) => getSubStatus(s.subs) === "trial").length : 0;
-
   const [modalStore, setModalStore] = useState<typeof stores['data'][number] | null>(null);
   const [selectedPkg, setSelectedPkg] = useState(3);
-  const [submitting, setSubmitting] = useState(false);
   const [subResult, setSubResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const handleOpenModal = (store: typeof stores['data'][number]) => {
@@ -125,16 +126,14 @@ export default function DashboardPage() {
 
   const handleSubscribe = async () => {
     if (!modalStore) return;
-    setSubmitting(true);
     setSubResult(null);
     try {
-      const result = await subscribeStoreApi(modalStore.id, selectedPkg);
+      // onSuccess hook ini meng-invalidate query ["stores"] → daftar toko + kartu count ikut refresh
+      const result = await subscribeMutation.mutateAsync({ storeId: modalStore.id, packageIndex: selectedPkg });
       const exp = formatDate(result.subscription.expiresAt);
       setSubResult({ ok: true, msg: `Subscription berhasil! Aktif hingga ${exp}.` });
     } catch (err) {
       setSubResult({ ok: false, msg: err instanceof Error ? err.message : "Gagal menambah subscription" });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -200,8 +199,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="px-5 md:px-8 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 my-2">
+        {/* Stats Cards — angka dari GET /store/count */}
+        <div className="px-5 md:px-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 my-2">
           <div className="bg-indigo-600 rounded-2xl p-4 md:p-5 text-white shadow-sm flex flex-col justify-between">
             <div>
               <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-indigo-200">Toko Aktif</p>
@@ -220,8 +219,16 @@ export default function DashboardPage() {
 
           <div className="hidden md:flex bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex-col justify-between">
             <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Expired</p>
+              <p className="text-4xl font-extrabold mt-2 text-red-500 tabular-nums">{expiredCount}</p>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">Perlu perpanjangan</p>
+          </div>
+
+          <div className="hidden md:flex bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex-col justify-between">
+            <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Total Terdaftar</p>
-              <p className="text-4xl font-extrabold mt-2 text-slate-900 tabular-nums">{totalItems}</p>
+              <p className="text-4xl font-extrabold mt-2 text-slate-900 tabular-nums">{totalCount}</p>
             </div>
             <p className="text-xs text-slate-400 mt-2">Semua outlet & cabang</p>
           </div>
@@ -480,10 +487,10 @@ export default function DashboardPage() {
 
                 <button
                   onClick={handleSubscribe}
-                  disabled={submitting}
+                  disabled={subscribeMutation.isPending}
                   className="w-full py-3 rounded-2xl bg-indigo-500 text-white font-semibold text-sm disabled:opacity-60 hover:bg-indigo-600 transition-colors"
                 >
-                  {submitting ? "Memproses..." : `Tambah ${formatRupiah(dataPrice[selectedPkg]?.price ?? 0)}`}
+                  {subscribeMutation.isPending ? "Memproses..." : `Tambah ${formatRupiah(dataPrice[selectedPkg]?.price ?? 0)}`}
                 </button>
               </>
             )}

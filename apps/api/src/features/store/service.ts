@@ -1,4 +1,4 @@
-import { and, count, desc, eq, exists, gt, ilike, max, not, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, exists, gt, ilike, not, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { store, subscription, users, balance, type StoreInsert, type User } from "../../db/schema.js";
 import { Exception } from "../../error.js";
@@ -14,59 +14,62 @@ interface PageQuery {
 }
 
 interface UserQuery {
-  userId?: string;
+  userId: string;
   role?: User["role"];
 }
 
-export const countStore = async ({ userId, role }: Required<UserQuery>) => {
-  const isSuperAdmin = role === "superadmin";
+/**
+ * Filter akses data toko berbasis role dari klaim JWT.
+ * - superadmin: `undefined` → tanpa filter (melihat & mengelola semua toko).
+ * - admin & user: hanya toko yang `referrerId`-nya sama dengan kode referral miliknya.
+ *
+ * Subquery kode referral mengembalikan nol baris bila user tidak punya kode referral,
+ * sehingga hasilnya kosong (perilaku sama seperti sebelumnya).
+ */
+export const storeScope = (userId: string, role: User["role"] | undefined) => {
+  if (role === "superadmin") return undefined;
 
-  const storeSubscriptions = db.$with("store_subs").as(
-    db
-      .select({
-        storeId: subscription.storeId,
-        // True jika di tabel subscription ada minimal satu data yang isTrial-nya true
-        isTrial: sql`bool_or(${subscription.isTrial})`.as("isTrial"),
-        lastSubs: max(subscription.expiresAt).as("lastSubscription"),
-      })
-      .from(subscription)
-      .groupBy(subscription.storeId),
-  );
+  const userReferralCode = db
+    .select({ code: users.refferalCode })
+    .from(users)
+    .where(eq(users.id, userId));
 
-  try {
-    const [result] = await db
-      .with(storeSubscriptions)
-      .select({
-        total: count(),
-        active: count(sql`case when ${storeSubscriptions.lastSubs} >= NOW() then 1 end`),
-        trial: count(
-          sql`case when ${storeSubscriptions.lastSubs} >= NOW() and ${storeSubscriptions.isTrial} = true then 1 end`,
-        ),
-        expired: count(sql`case when ${storeSubscriptions.lastSubs} < NOW() then 1 end`),
-      })
-      .from(store)
-      .leftJoin(storeSubscriptions, eq(store.id, storeSubscriptions.storeId))
-      .leftJoin(users, eq(users.refferalCode, store.referrerId))
-      .where(!isSuperAdmin ? eq(users.id, userId) : undefined);
-
-    return result;
-  } catch (error) {
-    console.log(error);
-    if (error instanceof Error) throw Exception.ServerError();
-  }
+  return eq(store.referrerId, userReferralCode);
 };
 
-export const getAllStore = async ({ limit, offset, search, status, userId }: UserQuery & PageQuery) => {
+export const countStore = async ({ userId, role }: Required<UserQuery>) => {
+  const now = new Date();
+
+  // subscription terakhir per toko → tepat satu baris per toko (expiresAt terbaru, lalu id terbesar)
+  const lastSubs = db
+    .selectDistinctOn([subscription.storeId], {
+      storeId: subscription.storeId,
+      isTrial: subscription.isTrial,
+      expiresAt: subscription.expiresAt,
+    })
+    .from(subscription)
+    .orderBy(subscription.storeId, desc(subscription.expiresAt), desc(subscription.id))
+    .as("last_subs");
+
+  // toko tanpa subscription → expiresAt NULL → tidak aktif, dihitung expired di bawah
+  const [result] = await db
+    .select({
+      total: count(),
+      active: count(sql`case when ${lastSubs.expiresAt} > ${now} then 1 end`),
+      trial: count(sql`case when ${lastSubs.expiresAt} > ${now} and ${lastSubs.isTrial} = true then 1 end`),
+    })
+    .from(store)
+    .leftJoin(lastSubs, eq(store.id, lastSubs.storeId))
+    .where(storeScope(userId, role));
+
+  const total = result?.total ?? 0;
+  const active = result?.active ?? 0;
+
+  return { total, active, trial: result?.trial ?? 0, expired: total - active };
+};
+
+export const getAllStore = async ({ limit, offset, search, status, userId, role }: UserQuery & PageQuery) => {
   const empty = { data: [], total: 0, limit, offset, hasNext: false };
-
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId ?? ""),
-  });
-  if (!user) return empty;
-
-  // user biasa hanya melihat toko referral miliknya; admin & superadmin melihat semua
-  const isUser = user.role === "user";
-  if (isUser && !user.refferalCode) return empty;
 
   // toko aktif = punya minimal satu subscription yang belum expired
   const hasActiveSub = exists(
@@ -76,9 +79,10 @@ export const getAllStore = async ({ limit, offset, search, status, userId }: Use
       .where(and(eq(subscription.storeId, store.id), gt(subscription.expiresAt, new Date()))),
   );
 
+  // superadmin melihat semua toko; admin & user hanya melihat toko referral miliknya
   const where = and(
+    storeScope(userId, role),
     search ? or(ilike(store.name, `%${search}%`), eq(store.id, search)) : undefined,
-    isUser ? eq(store.referrerId, user.refferalCode!) : undefined,
     status === "active" ? hasActiveSub : status === "expired" ? not(hasActiveSub) : undefined,
   );
 
@@ -176,7 +180,8 @@ export const addSubscriptionByBalance = async (
   const storeData = await db.query.store.findFirst({ where: eq(store.id, storeId) });
   if (!storeData) throw Exception.NotFound("store not found");
 
-  if (userRole === "user" && storeData.referrerId !== user.refferalCode)
+  // superadmin bebas; admin & user hanya boleh menambah paket untuk toko referral miliknya
+  if (userRole !== "superadmin" && storeData.referrerId !== user.refferalCode)
     throw Exception.Forbidden("Toko ini bukan referral Anda");
 
   if (userRole !== "superadmin") {

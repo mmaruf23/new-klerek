@@ -1,9 +1,35 @@
 import { apiClient } from "@/lib/apiClient";
 import { config } from "@/config";
 import { getAccessToken, clearSession } from "@/lib/session";
-import type { StoreQuery, SubscribeResult } from "../types";
+import type { StoreCountResponse, StoreQuery, SubscribeResult } from "../types";
 
 export const STORE_PAGE_LIMIT = config.STORE_PAGE_LIMIT;
+
+/**
+ * Rekap jumlah toko (total, aktif, trial, expired) dari GET /store/count.
+ * Angka bersifat global: tidak terpengaruh filter q/status/pagination di daftar toko.
+ */
+export async function fetchStoreCountApi(): Promise<StoreCountResponse> {
+  const token = getAccessToken();
+  const res = await apiClient.store.count.$get(
+    {},
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    },
+  );
+
+  if (res.status === 401) {
+    clearSession();
+    throw new Error("Unauthorized");
+  }
+
+  const json = await res.json();
+  if (!json.success || !json.data) {
+    throw new Error(json.message ?? "Gagal memuat rekap toko.");
+  }
+
+  return json.data;
+}
 
 export async function fetchStorePageApi({ q, status, offset = 0 }: StoreQuery) {
   const token = getAccessToken();

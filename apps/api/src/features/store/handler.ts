@@ -47,8 +47,9 @@ export const storeHandler = new Hono()
     const search = c.req.query("q")?.trim() || undefined;
     const statusQuery = c.req.query("status");
     const status = statusQuery === "active" || statusQuery === "expired" ? statusQuery : undefined;
-    const { sub: userId } = c.get("jwtPayload") as JwtClaims;
-    const { data, ...page } = await getAllStore({ limit, offset, search, status, userId });
+    const { sub: userId, role } = c.get("jwtPayload") as JwtClaims;
+    if (!userId) throw Exception.Unauthorized("Claims value tidak valid!");
+    const { data, ...page } = await getAllStore({ limit, offset, search, status, userId, role });
 
     return c.json<ApiResponse<typeof data>>({
       success: true,
@@ -70,7 +71,7 @@ export const storeHandler = new Hono()
   })
 
   // POST /store/:id/subscribe — tambah subscription via balance
-  // Hanya untuk toko yang refer ke akun pemanggil. Superadmin tidak dikenai debit.
+  // Superadmin bebas; admin & user hanya untuk toko referral miliknya. Superadmin tidak dikenai debit.
   .post("/:id/subscribe", authMiddleware, async (c) => {
     const id = c.req.param("id");
     if (!isValidStoreID(id)) throw Exception.Validation("invalid store id");
