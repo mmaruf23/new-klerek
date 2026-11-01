@@ -110,7 +110,6 @@ export const getStoreByIDWithLatestSubs = async (id: string) => {
     where: eq(store.id, id),
     with: {
       subs: {
-        where: gt(subscription.expiresAt, new Date()),
         orderBy: desc(subscription.expiresAt),
         limit: 1,
       },
