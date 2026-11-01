@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { StoreQuery } from "../types";
 import {
   fetchStoreCountApi,
@@ -10,11 +10,13 @@ import {
 
 export const STORE_QUERY_KEY = ["stores"] as const;
 
+export const EMPTY_STORE_PAGE: Awaited<ReturnType<typeof fetchStorePageApi>> = { data: [], page: undefined };
+
 export function useStoresQuery(query: StoreQuery) {
   return useQuery({
     queryKey: [...STORE_QUERY_KEY, query],
     queryFn: () => fetchStorePageApi(query),
-    initialData: () => ({data: [], page: undefined})
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -28,7 +28,7 @@ import {
   getSubStatus,
 } from "@/features/payment/utils/subscription";
 import { cn } from "@/lib/utils";
-import { useStoreCountQuery, useStoresQuery, useSubscribeStoreMutation } from "../hooks/useStores";
+import { useStoreCountQuery, useStoresQuery, useSubscribeStoreMutation, EMPTY_STORE_PAGE } from "../hooks/useStores";
 import { dataPrice } from "../../../constant";
 
 const STATUS_FILTERS: { label: string; value: StoreStatusFilter | undefined }[] = [
@@ -68,7 +68,7 @@ export default function DashboardPage() {
   const offset = Number(searchParams.get("offset") ?? "0");
   const [search, setSearch] = useState(q);
 
-  const { data: stores, error, isLoading } = useStoresQuery({ q, offset, status });
+  const { data: stores = EMPTY_STORE_PAGE, error, isLoading } = useStoresQuery({ q, offset, status });
 
   // Rekap count toko diambil dari GET /store/count — angka global (bukan hasil hitung per halaman)
   const { data: storeCount } = useStoreCountQuery();

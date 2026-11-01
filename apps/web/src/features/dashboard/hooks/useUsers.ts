@@ -1,14 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UserQuery } from "../types";
 import { fetchUsersApi, fetchUserDetailApi, updateUserRoleApi, adjustBalanceApi } from "../services/userService";
 
 export const USERS_QUERY_KEY = ["admin", "users"] as const;
 
+export const EMPTY_USERS_PAGE: Awaited<ReturnType<typeof fetchUsersApi>> = { data: [], page: undefined };
+
 export function useUsersQuery(query: UserQuery) {
   return useQuery({
     queryKey: [...USERS_QUERY_KEY, query],
     queryFn: () => fetchUsersApi(query),
-    initialData: () => ({ data: [], page: undefined }),
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -4,7 +4,7 @@ import { Search, X, ChevronRight } from "lucide-react";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
 import { formatRupiah } from "@/utils/format";
 import { UserDetailModal } from "./UserDetailModal";
-import { useUsersQuery } from "../hooks/useUsers";
+import { useUsersQuery, EMPTY_USERS_PAGE } from "../hooks/useUsers";
 
 export const ROLE_LABEL: Record<string, string> = { user: "User", admin: "Admin", superadmin: "Superadmin" };
 export const ROLE_COLOR: Record<string, string> = {
@@ -47,8 +47,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState(q);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const {data, error, isLoading: loading} = useUsersQuery({q, offset})
-  const {data: users, page} = data;
+  const { data = EMPTY_USERS_PAGE, error, isLoading: loading } = useUsersQuery({ q, offset });
+  const { data: users, page } = data;
 
   // const loadData = async (isAppend = false) => {
   //   setLoading(true);
