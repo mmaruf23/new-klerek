@@ -78,12 +78,11 @@ export const storeHandler = new Hono()
 
     const payload = c.get("jwtPayload") as JwtClaims;
     const userId = payload.sub!;
-    const userRole = payload.role ?? "user";
 
     const body = await c.req.json<{ packageIndex: unknown }>();
     if (typeof body.packageIndex !== "number") throw Exception.BadRequest("packageIndex must be a number");
 
-    const result = await addSubscriptionByBalance(userId, userRole, id, body.packageIndex);
+    const result = await addSubscriptionByBalance(userId, id, body.packageIndex);
 
     return c.json<ApiResponse<typeof result>>({ success: true, data: result }, 201);
   });

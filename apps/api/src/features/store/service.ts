@@ -29,10 +29,7 @@ interface UserQuery {
 export const storeScope = (userId: string, role: User["role"] | undefined) => {
   if (role === "superadmin") return undefined;
 
-  const userReferralCode = db
-    .select({ code: users.refferalCode })
-    .from(users)
-    .where(eq(users.id, userId));
+  const userReferralCode = db.select({ code: users.refferalCode }).from(users).where(eq(users.id, userId));
 
   return eq(store.referrerId, userReferralCode);
 };
@@ -166,24 +163,29 @@ export const getUserBalance = async (userId: string): Promise<number> => {
 
 export const addSubscriptionByBalance = async (
   userId: string,
-  userRole: "user" | "admin" | "superadmin",
   storeId: string,
   packageIndex: number,
 ) => {
   const pkg = dataPrice[packageIndex];
   if (!pkg) throw Exception.BadRequest("invalid package index");
 
-  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
-  if (!user) throw Exception.Unauthorized();
+  const [row] = await db
+    .select({
+      userId: users.id,
+      userRole: users.role,
+      storeId: store.id,
+      isOwner: eq(store.referrerId, users.refferalCode),
+    })
+    .from(users)
+    .leftJoin(store, eq(store.id, storeId))
+    .where(eq(users.id, userId))
+    .limit(1);
 
-  const storeData = await db.query.store.findFirst({ where: eq(store.id, storeId) });
-  if (!storeData) throw Exception.NotFound("store not found");
+  if (!row) throw Exception.Unauthorized();
+  if (!row.storeId) throw Exception.NotFound("Toko tidak ditemukan");
 
-  // superadmin bebas; admin & user hanya boleh menambah paket untuk toko referral miliknya
-  if (userRole !== "superadmin" && storeData.referrerId !== user.refferalCode)
-    throw Exception.Forbidden("Toko ini bukan referral Anda");
-
-  if (userRole !== "superadmin") {
+  if (row.userRole !== "superadmin") {
+    if (!row.isOwner) throw Exception.Forbidden("Toko ini bukan referral Anda");
     const currentBalance = await getUserBalance(userId);
     if (currentBalance < pkg.price) throw Exception.BadRequest("insufficient balance");
 
@@ -206,5 +208,5 @@ export const addSubscriptionByBalance = async (
 
   const [newSub] = await db.insert(subscription).values({ storeId, expiresAt }).returning();
 
-  return { subscription: newSub, debitAmount: userRole !== "superadmin" ? pkg.price : 0 };
+  return { subscription: newSub, debitAmount: row.userRole !== "superadmin" ? pkg.price : 0 };
 };
